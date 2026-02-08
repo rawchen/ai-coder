@@ -1,0 +1,15 @@
+server:
+  port: 9000
+#  servlet:
+#    context-path: /ai-coder
+spring:
+  application:
+    name: ai-coder
+  mvc:
+    async:
+      request-timeout: 300000  # 5分钟（单位：毫秒），用于 deepseek-reasoner 等慢速模型
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_coder?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&useSSL=false
+    username: root
+    password: root

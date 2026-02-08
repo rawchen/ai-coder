@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rawchen.ai.mapper.TenantAuthMapper">
+	<insert id="insertBatch">
+		INSERT INTO tenant_auth
+		(tenant_key, authorization_id, created_at, updated_at)
+		VALUES
+		<foreach collection="tenantAuths" item="item" separator=",">
+			(#{item.tenantKey}, #{item.authorizationId}, #{item.createdAt}, #{item.updatedAt})
+		</foreach>
+	</insert>
+</mapper>
