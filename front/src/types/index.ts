@@ -86,7 +86,7 @@ export interface ExportOptions {
 export interface StyleOptions {
   codeStyle: 'modern' | 'classic' | 'minimal';
   commentLevel: 'full' | 'minimal' | 'none';
-  indentation: 'spaces2' | 'spaces4' | 'tabs';
+  indentation: 'auto' | 'spaces2' | 'spaces4' | 'tabs';
 }
 
 // 响应模式类型

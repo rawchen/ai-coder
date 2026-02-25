@@ -163,8 +163,8 @@ export async function callAI(
 
               // 收集 content
               const content = delta.content || '';
-              if (content && delta.reasoning_content === null) {
-                // 检测到正文开始（content 有值且 reasoning_content 为 null）
+              if (content && (delta.reasoning_content === null || delta.reasoning_content == undefined)) {
+                // 检测到正文开始（content 有值且 (reasoning_content 为 null 或 reasoning_content 不存在)）
                 if (!reasoningEndTime && reasoningStartTime) {
                   reasoningEndTime = Date.now();
                   console.log('思考结束，触发完成回调，用时:', Math.round((reasoningEndTime - reasoningStartTime) / 1000));

@@ -15,7 +15,7 @@ public class Constants {
 
     public final static String KIMI_API_KEY = "sk-xxx";
     public final static String KIMI_BASE_URL = "https://api.moonshot.cn/v1";
-    public final static String KIMI_MODEL = "moonshot-v1-8k";
+    public final static String KIMI_MODEL = "kimi-k2.5";
 
     public final static String GLM_API_KEY = "xxx";
     public final static String GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";

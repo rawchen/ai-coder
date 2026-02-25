@@ -182,7 +182,7 @@ public class MainController {
                     body.put("model", modelName);
                     body.put("messages", messages);
                     body.put("stream", stream);
-                    body.put("temperature", "simple".equals(responseMode) ? 0.5 : 0.7);
+                    body.put("temperature", "simple".equals(responseMode) ? 0.6 : 1);
                     body.put("max_tokens", "simple".equals(responseMode) ? 1024 * 8 : 1024 * 64);
                     Map<String, String> thinking = new HashMap<>();
                     thinking.put("type", "simple".equals(responseMode) ? "disabled" : "enabled");

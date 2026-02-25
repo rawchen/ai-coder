@@ -371,10 +371,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <div>
                 <label className="block text-xs text-gray-400 mb-1">缩进方式</label>
                 <select
-                  value={styleOptions.indentation}
-                  onChange={(e) => onStyleChange({ ...styleOptions, indentation: e.target.value as StyleOptions['indentation'] })}
-                  className="w-full bg-gray-700 text-gray-200 text-sm rounded px-2 py-1.5 border border-gray-600"
+                    value={styleOptions.indentation}
+                    onChange={(e) => onStyleChange({
+                      ...styleOptions,
+                      indentation: e.target.value as StyleOptions['indentation']
+                    })}
+                    className="w-full bg-gray-700 text-gray-200 text-sm rounded px-2 py-1.5 border border-gray-600"
                 >
+                  <option value="auto">智能</option>
                   <option value="spaces2">2空格</option>
                   <option value="spaces4">4空格</option>
                   <option value="tabs">Tab</option>

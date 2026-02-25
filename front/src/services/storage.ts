@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   styleOptions: {
     codeStyle: 'modern' as const,
     commentLevel: 'full' as const,
-    indentation: 'spaces2' as const
+    indentation: 'auto' as const
   },
   simpleQAMode: {
     enabled: true,
