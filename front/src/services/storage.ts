@@ -1,4 +1,4 @@
-import { Conversation, ProjectFile, FileHistory, StyleOptions, SimpleQAMode, StreamMode } from '../types';
+import { Conversation, ProjectFile, FileHistory, StyleOptions, SimpleQAMode, StreamMode, ModelType } from '../types';
 
 const STORAGE_KEY = 'code_gen_conversations';
 const FILES_KEY = 'code_gen_files';
@@ -7,6 +7,7 @@ const CURRENT_CONVERSATION_KEY = 'code_gen_current_conversation';
 
 // 默认设置
 const DEFAULT_SETTINGS = {
+  model: 'deepseek' as ModelType,
   styleOptions: {
     codeStyle: 'modern' as const,
     commentLevel: 'full' as const,
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS = {
 
 // 保存设置
 export function saveSettings(settings: {
+  model: ModelType;
   styleOptions: StyleOptions;
   simpleQAMode: SimpleQAMode;
   streamMode: StreamMode;
@@ -35,6 +37,7 @@ export function saveSettings(settings: {
 
 // 加载设置
 export function loadSettings(): {
+  model: ModelType;
   styleOptions: StyleOptions;
   simpleQAMode: SimpleQAMode;
   streamMode: StreamMode;

@@ -395,6 +395,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           >
             <option value="deepseek" className="hover:bg-gray-600 transition-colors">DeepSeek</option>
             <option value="kimi" className="hover:bg-gray-600 transition-colors">Kimi</option>
+            <option value="glm" className="hover:bg-gray-600 transition-colors">GLM</option>
           </select>
           <button
               ref={suggestionsButtonRef}

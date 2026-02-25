@@ -157,6 +157,10 @@ public class MainController {
                 baseUrl = Constants.KIMI_BASE_URL;
                 apiKey = Constants.KIMI_API_KEY;
                 modelName = Constants.KIMI_MODEL;
+            } else if ("glm".equals(model)) {
+                baseUrl = Constants.GLM_BASE_URL;
+                apiKey = Constants.GLM_API_KEY;
+                modelName = Constants.GLM_MODEL;
             } else {
                 return ResponseEntity.badRequest().build();
             }

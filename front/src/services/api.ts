@@ -12,31 +12,6 @@ interface ApiConfig {
 // 后端 API 配置
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
-// API 配置（仅用于模型信息，不直接调用）
-const API_CONFIG: Record<ModelType, ApiConfig> = {
-  deepseek: {
-    baseUrl: 'https://api.deepseek.com',
-    apiKey: '', // API key 已移至后端
-    chatModel: 'deepseek-chat',
-    reasonerModel: 'deepseek-reasoner'
-  },
-  kimi: {
-    baseUrl: 'https://api.moonshot.cn/v1',
-    apiKey: '', // API key 已移至后端
-    model: 'moonshot-v1-8k'
-  }
-};
-
-// 获取模型名称（根据响应模式选择）
-function getModelName(model: ModelType, responseMode: ResponseMode): string {
-  const config = API_CONFIG[model];
-  if (model === 'deepseek') {
-    // 代码模式使用 reasoner，简单的问答模式使用 chat
-    return responseMode === 'code' ? config.reasonerModel! : config.chatModel!;
-  }
-  return config.model!;
-}
-
 // 代码生成模式系统提示词
 const CODE_SYSTEM_PROMPT = `你是一个专业的代码生成助手，擅长：
 1. 根据用户描述生成高质量的代码

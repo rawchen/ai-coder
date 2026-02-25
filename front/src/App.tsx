@@ -52,22 +52,64 @@ const getDefaultPanelStates = () => {
 
 function App() {
   // 状态
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
-  const [model, setModel] = useState<ModelType>('deepseek');
-  const [responseMode, setResponseMode] = useState<ResponseMode>('simple');
-  const [streamMode, setStreamMode] = useState<StreamMode>('stream');
-  const [simpleQAMode, setSimpleQAMode] = useState<SimpleQAMode>({
-    enabled: true,
-    maxResponseLength: 'medium',
-    includeCodeExamples: true
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const savedConversations = loadConversations();
+    return savedConversations;
   });
-  const [styleOptions, setStyleOptions] = useState<StyleOptions>({
-    codeStyle: 'modern',
-    commentLevel: 'full',
-    indentation: 'spaces2'
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
+    const savedConversations = loadConversations();
+    const savedCurrentId = loadCurrentConversationId();
+
+    if (savedConversations.length > 0) {
+      let targetId = savedCurrentId;
+      // 如果保存的ID不存在于当前会话列表中，则使用第一个会话
+      if (targetId && !savedConversations.find(c => c.id === targetId)) {
+        targetId = savedConversations[0].id;
+      } else if (!targetId) {
+        targetId = savedConversations[0].id;
+      }
+      return targetId;
+    }
+    return null;
+  });
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => {
+    const savedConversations = loadConversations();
+    const savedCurrentId = loadCurrentConversationId();
+
+    if (savedConversations.length > 0) {
+      let targetId = savedCurrentId;
+      if (targetId && !savedConversations.find(c => c.id === targetId)) {
+        targetId = savedConversations[0].id;
+      } else if (!targetId) {
+        targetId = savedConversations[0].id;
+      }
+      const targetConversation = savedConversations.find(c => c.id === targetId);
+      if (targetConversation) {
+        return targetConversation.projectFiles || [];
+      }
+    }
+    return [];
+  });
+  const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
+  const [model, setModel] = useState<ModelType>(() => {
+    const savedSettings = loadSettings();
+    return savedSettings.model;
+  });
+  const [responseMode, setResponseMode] = useState<ResponseMode>(() => {
+    const savedSettings = loadSettings();
+    return savedSettings.simpleQAMode.enabled ? 'simple' : 'code';
+  });
+  const [streamMode, setStreamMode] = useState<StreamMode>(() => {
+    const savedSettings = loadSettings();
+    return savedSettings.streamMode;
+  });
+  const [simpleQAMode, setSimpleQAMode] = useState<SimpleQAMode>(() => {
+    const savedSettings = loadSettings();
+    return savedSettings.simpleQAMode;
+  });
+  const [styleOptions, setStyleOptions] = useState<StyleOptions>(() => {
+    const savedSettings = loadSettings();
+    return savedSettings.styleOptions;
   });
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -100,35 +142,8 @@ function App() {
   // 获取当前对话
   const currentConversation = conversations.find(c => c.id === currentConversationId);
 
-  // 加载保存的数据和设置
+  // 页面加载完成后聚焦输入框，并滚动到底部
   useEffect(() => {
-    const savedConversations = loadConversations();
-    const savedSettings = loadSettings();
-    const savedCurrentId = loadCurrentConversationId();
-
-    setConversations(savedConversations);
-    setStyleOptions(savedSettings.styleOptions);
-    setSimpleQAMode(savedSettings.simpleQAMode);
-    setStreamMode(savedSettings.streamMode);
-    setResponseMode(savedSettings.simpleQAMode.enabled ? 'simple' : 'code');
-
-    // 优先加载上次选中的会话，如果不存在则加载第一个会话
-    if (savedConversations.length > 0) {
-      let targetId = savedCurrentId;
-      // 如果保存的ID不存在于当前会话列表中，则使用第一个会话
-      if (targetId && !savedConversations.find(c => c.id === targetId)) {
-        targetId = savedConversations[0].id;
-      } else if (!targetId) {
-        targetId = savedConversations[0].id;
-      }
-      setCurrentConversationId(targetId);
-      const targetConversation = savedConversations.find(c => c.id === targetId);
-      if (targetConversation) {
-        setProjectFiles(targetConversation.projectFiles || []);
-      }
-    }
-
-    // 页面加载完成后聚焦输入框，并滚动到底部
     setTimeout(() => {
       chatInputRef.current?.focus();
       // 滚动对话到底部
@@ -141,11 +156,12 @@ function App() {
   // 保存设置到本地存储
   useEffect(() => {
     saveSettings({
+      model,
       styleOptions,
       simpleQAMode,
       streamMode
     });
-  }, [styleOptions, simpleQAMode, streamMode]);
+  }, [model, styleOptions, simpleQAMode, streamMode]);
 
   // 保存数据
   useEffect(() => {
