@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Download, ArrowLeftRight, FileCode } from 'lucide-react';
+import { Copy, Check, Download, ArrowLeftRight, FileCode, Loader2 } from 'lucide-react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -22,9 +22,10 @@ interface CodeBlockViewProps {
   onCopy?: (code: string) => void;
   onApply?: () => void;
   onDownload?: () => void;
+  incomplete?: boolean;
 }
 
-export function CodeBlockView({ code, language, filename, onCopy, onApply, onDownload }: CodeBlockViewProps) {
+export function CodeBlockView({ code, language, filename, onCopy, onApply, onDownload, incomplete }: CodeBlockViewProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -92,13 +93,17 @@ export function CodeBlockView({ code, language, filename, onCopy, onApply, onDow
   const lines = highlighted.split('\n');
 
   return (
-    <div className="rounded-lg overflow-hidden bg-gray-900 border border-gray-700">
+    <div className={`rounded-lg overflow-hidden bg-gray-900 border ${incomplete ? 'border-blue-600/50' : 'border-gray-700'}`}>
       {/* 标题栏 */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+      <div className={`flex items-center justify-between px-4 py-2 bg-gray-800 border-b ${incomplete ? 'border-blue-600/50' : 'border-gray-700'}`}>
         <div className="flex items-center gap-2">
-          <FileCode size={14} className="text-gray-400" />
-          <span className="text-sm text-gray-300">{filename || language}</span>
-          <span className="text-xs text-gray-500 px-2 py-0.5 bg-gray-700 rounded">{language}</span>
+          {incomplete && <Loader2 size={14} className="text-blue-400 animate-spin" />}
+          <FileCode size={14} className={incomplete ? "text-blue-400" : "text-gray-400"} />
+          <span className={`text-sm ${incomplete ? 'text-blue-300' : 'text-gray-300'}`}>
+            {filename || language}
+            {incomplete && ' (正在生成中...)'}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded ${incomplete ? 'text-blue-400 bg-blue-900/50' : 'text-gray-500 bg-gray-700'}`}>{language}</span>
         </div>
         <div className="flex items-center gap-1 group">
           {onApply && (

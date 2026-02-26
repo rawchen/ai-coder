@@ -245,7 +245,7 @@ function App() {
     if (chatContainerRef.current && autoScroll) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [currentConversation?.messages, streamingContent]);
+  }, [currentConversation?.messages, streamingContent, streamingReasoningContent]);
 
   // 监听滚动事件，判断用户是否手动滚动
   useEffect(() => {

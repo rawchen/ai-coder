@@ -15,11 +15,13 @@ interface ChatMessageProps {
 export function ChatMessage({ message, onApplyCode, onCopyCode }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
-  // 解析消息中的代码块
+  // 解析消息中的代码块（包括未完成的代码块）
   const parseContent = (content: string) => {
-    const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+?))?\n([\s\S]*?)```/g;
-    const parts: { type: 'text' | 'code'; content: string; language?: string; filename?: string }[] = [];
+    const parts: { type: 'text' | 'code'; content: string; language?: string; filename?: string; incomplete?: boolean }[] = [];
     let lastIndex = 0;
+
+    // 匹配完整的代码块
+    const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
     let match;
 
     while ((match = codeBlockRegex.exec(content)) !== null) {
@@ -28,12 +30,13 @@ export function ChatMessage({ message, onApplyCode, onCopyCode }: ChatMessagePro
         parts.push({ type: 'text', content: content.slice(lastIndex, match.index) });
       }
 
-      // 添加代码块
+      // 添加完整的代码块
       parts.push({
         type: 'code',
         language: match[1] || 'plaintext',
         filename: match[2]?.trim(),
-        content: match[3].trim()
+        content: match[3].trim(),
+        incomplete: false
       });
 
       lastIndex = match.index + match[0].length;
@@ -41,7 +44,30 @@ export function ChatMessage({ message, onApplyCode, onCopyCode }: ChatMessagePro
 
     // 添加剩余文本
     if (lastIndex < content.length) {
-      parts.push({ type: 'text', content: content.slice(lastIndex) });
+      const remaining = content.slice(lastIndex);
+
+      // 检查剩余文本是否包含未完成的代码块（只有 ``` 开头没有结尾）
+      const incompleteCodeMatch = remaining.match(/```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*)$/);
+
+      if (incompleteCodeMatch) {
+        // 添加代码块前的文本（如果有）
+        const beforeCode = remaining.slice(0, incompleteCodeMatch.index);
+        if (beforeCode) {
+          parts.push({ type: 'text', content: beforeCode });
+        }
+
+        // 添加未完成的代码块
+        parts.push({
+          type: 'code',
+          language: incompleteCodeMatch[1] || 'plaintext',
+          filename: incompleteCodeMatch[2]?.trim(),
+          content: incompleteCodeMatch[3].trim(),
+          incomplete: true // 标记为未完成
+        });
+      } else {
+        // 纯文本
+        parts.push({ type: 'text', content: remaining });
+      }
     }
 
     return parts.length > 0 ? parts : [{ type: 'text' as const, content }];
@@ -100,12 +126,13 @@ export function ChatMessage({ message, onApplyCode, onCopyCode }: ChatMessagePro
                     language={part.language || 'plaintext'}
                     filename={part.filename}
                     onCopy={onCopyCode}
-                    onApply={onApplyCode ? () => onApplyCode({
+                    onApply={!part.incomplete && onApplyCode ? () => onApplyCode({
                       id: `${message.id}-${index}`,
                       code: part.content,
                       language: part.language || 'plaintext',
                       filename: part.filename
                     }) : undefined}
+                    incomplete={part.incomplete}
                   />
                 ) : (
                   <div key={index} className="prose prose-invert prose-sm max-w-none break-words">
