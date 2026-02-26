@@ -14,6 +14,7 @@ import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-yaml';
 
 interface CodeBlockViewProps {
   code: string;
@@ -64,7 +65,7 @@ export function CodeBlockView({ code, language, filename, onCopy, onApply, onDow
     const extensions: { [key: string]: string } = {
       javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
       go: 'go', rust: 'rs', sql: 'sql', bash: 'sh', json: 'json',
-      css: 'css', html: 'html', markup: 'html'
+      css: 'css', html: 'html', markup: 'html', yaml: 'yaml', yml: 'yaml', xml: 'xml'
     };
     return extensions[lang] || 'txt';
   };
@@ -74,7 +75,7 @@ export function CodeBlockView({ code, language, filename, onCopy, onApply, onDow
     const mapping: { [key: string]: string } = {
       js: 'javascript', ts: 'typescript', py: 'python',
       jsx: 'javascript', tsx: 'typescript', sh: 'bash',
-      html: 'markup', xml: 'markup'
+      html: 'markup', xml: 'markup', yml: 'yaml', yaml: 'yaml'
     };
     return mapping[lang] || lang;
   };
