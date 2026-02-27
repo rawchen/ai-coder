@@ -1,13 +1,13 @@
 import { DiffResult } from '../types';
-import { Plus, Minus, Equal } from 'lucide-react';
+import { Equal, Minus, Plus } from 'lucide-react';
 
 interface DiffViewerProps {
   diff: DiffResult;
   viewMode?: 'split' | 'unified';
 }
 
-export function DiffViewer({ diff, viewMode = 'unified' }: DiffViewerProps) {
-  const { filename, additions, deletions, changes } = diff;
+export function DiffViewer({diff, viewMode = 'unified'}: DiffViewerProps) {
+  const {filename, additions, deletions, changes} = diff;
 
   if (viewMode === 'split') {
     return (
@@ -16,10 +16,10 @@ export function DiffViewer({ diff, viewMode = 'unified' }: DiffViewerProps) {
           <span className="text-sm text-gray-300 font-medium">{filename}</span>
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1 text-green-400">
-              <Plus size={12} /> {additions}
+              <Plus size={12}/> {additions}
             </span>
             <span className="flex items-center gap-1 text-red-400">
-              <Minus size={12} /> {deletions}
+              <Minus size={12}/> {deletions}
             </span>
           </div>
         </div>
@@ -92,10 +92,10 @@ export function DiffViewer({ diff, viewMode = 'unified' }: DiffViewerProps) {
         <span className="text-sm text-gray-300 font-medium">{filename}</span>
         <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1 text-green-400">
-            <Plus size={12} /> {additions} 新增
+            <Plus size={12}/> {additions} 新增
           </span>
           <span className="flex items-center gap-1 text-red-400">
-            <Minus size={12} /> {deletions} 删除
+            <Minus size={12}/> {deletions} 删除
           </span>
         </div>
       </div>
@@ -109,14 +109,14 @@ export function DiffViewer({ diff, viewMode = 'unified' }: DiffViewerProps) {
                 change.type === 'add'
                   ? 'bg-green-500/20'
                   : change.type === 'remove'
-                  ? 'bg-red-500/20'
-                  : ''
+                    ? 'bg-red-500/20'
+                    : ''
               }`}
             >
               <span className="select-none w-6 text-center flex-shrink-0">
-                {change.type === 'add' && <Plus size={14} className="text-green-400 inline" />}
-                {change.type === 'remove' && <Minus size={14} className="text-red-400 inline" />}
-                {change.type === 'unchanged' && <Equal size={14} className="text-gray-600 inline" />}
+                {change.type === 'add' && <Plus size={14} className="text-green-400 inline"/>}
+                {change.type === 'remove' && <Minus size={14} className="text-red-400 inline"/>}
+                {change.type === 'unchanged' && <Equal size={14} className="text-gray-600 inline"/>}
               </span>
               <span className="select-none text-gray-600 w-10 text-right pr-3 flex-shrink-0">
                 {change.lineNumber}
@@ -125,8 +125,8 @@ export function DiffViewer({ diff, viewMode = 'unified' }: DiffViewerProps) {
                 change.type === 'add'
                   ? 'text-green-300'
                   : change.type === 'remove'
-                  ? 'text-red-300'
-                  : 'text-gray-300'
+                    ? 'text-red-300'
+                    : 'text-gray-300'
               }`}>
                 {change.content || ' '}
               </span>

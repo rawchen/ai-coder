@@ -25,7 +25,7 @@ export function ConversationList({
           onClick={onNew}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
         >
-          <Plus size={18} />
+          <Plus size={18}/>
           新建对话
         </button>
       </div>
@@ -34,7 +34,7 @@ export function ConversationList({
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
-            <MessageSquare size={40} className="mx-auto mb-2 opacity-50" />
+            <MessageSquare size={40} className="mx-auto mb-2 opacity-50"/>
             <p className="text-sm">暂无对话</p>
             <p className="text-xs mt-1">点击上方按钮开始新对话</p>
           </div>
@@ -43,20 +43,20 @@ export function ConversationList({
             {conversations.map(conv => (
               <div
                 key={conv.id}
-                className={`group flex items-center gap-3 px-3 py-2 mx-2 rounded-lg cursor-pointer transition-colors ${
+                className={`group flex items-center gap-3 px-3 py-2 mx-2 rounded-lg cursor-pointer transition-colors select-none border ${
                   currentId === conv.id
-                    ? 'bg-blue-500/20 border border-blue-500/30'
-                    : 'hover:bg-gray-700/50'
+                    ? 'border-blue-500/30 bg-blue-500/20'
+                    : 'border-transparent hover:bg-gray-700/50'
                 }`}
                 onClick={() => onSelect(conv.id)}
               >
-                <MessageSquare size={16} className="text-gray-400 flex-shrink-0" />
+                <MessageSquare size={16} className="text-gray-400 flex-shrink-0"/>
 
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-gray-200 truncate">{conv.title}</div>
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <span>{formatDate(conv.updatedAt)}</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-600" />
+                    <span className="w-1 h-1 rounded-full bg-gray-600"/>
                     <span>{conv.messages.length}条消息</span>
                   </div>
                 </div>
@@ -69,7 +69,7 @@ export function ConversationList({
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-red-400 transition-all"
                   title="删除对话"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={14}/>
                 </button>
               </div>
             ))}
