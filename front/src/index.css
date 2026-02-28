@@ -25,6 +25,29 @@
         --sidebar-border: 240 3.7% 15.9%;
         --sidebar-ring: 217.2 91.2% 59.8%
     }
+
+    .light {
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%
+    }
+}
+
+/* 默认夜间模式 */
+html {
+    background-color: #111827;
+    color: #f3f4f6;
+}
+
+/* 白天模式 */
+html.light {
+    background-color: #ffffff;
+    color: #111827;
 }
 
 /* 移动端视口优化 */
@@ -41,83 +64,158 @@ html, body {
     -webkit-overflow-scrolling: touch;
 }
 
-/* 代码高亮主题 */
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
+/* 代码高亮主题 - 夜间模式 */
+.dark .token.comment,
+.dark .token.prolog,
+.dark .token.doctype,
+.dark .token.cdata {
     color: #6b7280
 }
 
-.token.punctuation {
+.dark .token.punctuation {
     color: #9ca3af
 }
 
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
+.dark .token.property,
+.dark .token.tag,
+.dark .token.boolean,
+.dark .token.number,
+.dark .token.constant,
+.dark .token.symbol,
+.dark .token.deleted {
     color: #a78bfa;
 }
 
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
+.dark .token.selector,
+.dark .token.attr-name,
+.dark .token.string,
+.dark .token.char,
+.dark .token.builtin,
+.dark .token.inserted {
     color: #e6db74;
 }
 
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
+.dark .token.operator,
+.dark .token.entity,
+.dark .token.url,
+.dark .language-css .token.string,
+.dark .style .token.string {
     color: #f82465;
 }
 
-.token.atrule,
-.token.attr-value,
-.token.keyword {
+.dark .token.atrule,
+.dark .token.attr-value,
+.dark .token.keyword {
     color: #f82465;
 }
 
-.token.function,
-.token.class-name {
+.dark .token.function,
+.dark .token.class-name {
     color: #66d9ef;
 }
 
-.token.regex,
-.token.important,
-.token.variable {
+.dark .token.regex,
+.dark .token.important,
+.dark .token.variable {
     color: #fbbf24;
 }
 
-/* 滚动条样式 */
-::-webkit-scrollbar {
+/* 代码高亮主题 - 白天模式 */
+.light .token.comment,
+.light .token.prolog,
+.light .token.doctype,
+.light .token.cdata {
+    color: #6b7280;
+}
+
+.light .token.punctuation {
+    color: #374151;
+}
+
+.light .token.property,
+.light .token.tag,
+.light .token.boolean,
+.light .token.number,
+.light .token.constant,
+.light .token.symbol,
+.light .token.deleted {
+    color: #7c3aed;
+}
+
+.light .token.selector,
+.light .token.attr-name,
+.light .token.string,
+.light .token.char,
+.light .token.builtin,
+.light .token.inserted {
+    color: #d97706;
+}
+
+.light .token.operator,
+.light .token.entity,
+.light .token.url,
+.light .language-css .token.string,
+.light .style .token.string {
+    color: #dc2626;
+}
+
+.light .token.atrule,
+.light .token.attr-value,
+.light .token.keyword {
+    color: #dc2626;
+}
+
+.light .token.function,
+.light .token.class-name {
+    color: #2563eb;
+}
+
+.light .token.regex,
+.light .token.important,
+.light .token.variable {
+    color: #d97706;
+}
+
+/* 滚动条样式 - 夜间模式 */
+.dark ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-::-webkit-scrollbar-track {
+.dark ::-webkit-scrollbar-track {
     background: #1f2937;
 }
 
-::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb {
     background: #4b5563;
     border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.dark ::-webkit-scrollbar-thumb:hover {
     background: #6b7280;
 }
 
-/* Prose 样式覆盖 */
-.prose {
+/* 滚动条样式 - 白天模式 */
+.light ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.light ::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.light ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Prose 样式覆盖 - 夜间模式 */
+.dark .prose {
     --tw-prose-body: #d1d5db;
     --tw-prose-headings: #f3f4f6;
     --tw-prose-links: #60a5fa;
@@ -126,26 +224,58 @@ html, body {
     --tw-prose-quotes: #9ca3af;
 }
 
-.prose code {
-    background-color: #d45730;
+.dark .prose code {
+    background-color: #1f2937;
+    color: #e5e7eb;
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
     font-size: 0.875em;
 }
 
-/* 在你的CSS文件中 */
-.prose code::before,
-.prose code::after {
+.dark .prose code::before,
+.dark .prose code::after {
     content: none !important;
 }
 
-.prose pre {
+.dark .prose pre {
     background-color: #111827;
     border: 1px solid #374151;
 }
 
-.prose-pre {
+.dark .prose-pre {
     background-color: #49546326;
+}
+
+/* Prose 样式覆盖 - 白天模式 */
+.light .prose {
+    --tw-prose-body: #374151;
+    --tw-prose-headings: #111827;
+    --tw-prose-links: #2563eb;
+    --tw-prose-bold: #111827;
+    --tw-prose-code: #111827;
+    --tw-prose-quotes: #6b7280;
+}
+
+.light .prose code {
+    background-color: #f3f4f6;
+    color: #111827;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+}
+
+.light .prose code::before,
+.light .prose code::after {
+    content: none !important;
+}
+
+.light .prose pre {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.light .prose-pre {
+    background-color: #e5e7eb40;
 }
 
 /* 动画 */

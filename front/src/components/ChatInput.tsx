@@ -21,6 +21,7 @@ interface ChatInputProps {
   simpleQAMode: SimpleQAMode;
   onSimpleQAModeChange: (mode: SimpleQAMode) => void;
   streamComplete?: boolean;
+  isDark: boolean;
 }
 
 export interface ChatInputRef {
@@ -45,7 +46,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   onStreamModeChange,
   simpleQAMode,
   onSimpleQAModeChange,
-  streamComplete = false
+  streamComplete = false,
+  isDark
 }, ref) => {
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -209,7 +211,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const displaySuggestions = suggestions.length > 0 ? suggestions : defaultSuggestions;
 
   return (
-    <div className="border-t border-gray-700 bg-gray-800 p-4">
+    <div className={`border-t p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
       {/* 智能推荐 */}
       {showSuggestions && (
         <div ref={suggestionsRef} className="mb-4 grid grid-cols-2 gap-2">
@@ -217,7 +219,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             <button
               key={index}
               onClick={() => useSuggestion(suggestion)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-left"
+              className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors text-left ${isDark ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
             >
               <Sparkles size={14} className="text-yellow-400 flex-shrink-0" />
               <span className="truncate">{suggestion}</span>
@@ -230,7 +232,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {stagedFiles.length > 0 && (
         <div className="mb-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400">已选择 {stagedFiles.length} 个文件</span>
+            <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>已选择 {stagedFiles.length} 个文件</span>
             <button
               onClick={handleSendWithFiles}
               disabled={isLoading}
@@ -262,15 +264,15 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
       {/* 统一设置面板 */}
       {showSettings && (
-        <div ref={settingsRef} className="mb-4 p-4 bg-gray-700/50 rounded-lg space-y-4">
+        <div ref={settingsRef} className={`mb-4 p-4 rounded-lg space-y-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-200/50'}`}>
           {/* 简单问答模式设置 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 flex-shrink-0">
-                <MessageCircle size={18} className={simpleQAMode.enabled ? 'text-green-400' : 'text-gray-400'} />
+                <MessageCircle size={18} className={simpleQAMode.enabled ? 'text-green-400' : (isDark ? 'text-gray-400' : 'text-gray-500')} />
                 <div>
-                  <div className="text-sm font-medium text-gray-200">简单模式</div>
-                  <div className="text-xs text-gray-500">
+                  <div className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>简单模式</div>
+                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                     {simpleQAMode.enabled ? '简单问题给出简洁回答' : '生成思考过程和完整代码结构'}
                   </div>
                 </div>
@@ -281,7 +283,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                     <select
                       value={simpleQAMode.maxResponseLength}
                       onChange={(e) => onSimpleQAModeChange({ ...simpleQAMode, maxResponseLength: e.target.value as 'short' | 'medium' | 'long' })}
-                      className="bg-gray-700 text-gray-200 text-sm rounded px-2 py-1 border border-gray-600"
+                      className={`text-sm rounded px-2 py-1 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
                     >
                       <option value="short">简短</option>
                       <option value="medium">适中</option>
@@ -294,9 +296,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                       id="includeCodeExamples"
                       checked={simpleQAMode.includeCodeExamples}
                       onChange={(e) => onSimpleQAModeChange({ ...simpleQAMode, includeCodeExamples: e.target.checked })}
-                      className="rounded bg-gray-700 border-gray-600 text-blue-500"
+                      className={`rounded text-blue-500 ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
                     />
-                    <label htmlFor="includeCodeExamples" className="text-sm text-gray-300">包含代码示例</label>
+                    <label htmlFor="includeCodeExamples" className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>包含代码示例</label>
                   </div>
                 </>
               )}
@@ -304,7 +306,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             <button
               onClick={toggleSimpleQAMode}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                simpleQAMode.enabled ? 'bg-green-500' : 'bg-gray-600'
+                simpleQAMode.enabled ? 'bg-green-500' : (isDark ? 'bg-gray-600' : 'bg-gray-400')
               }`}
             >
               <span
@@ -316,12 +318,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           </div>
 
           {/* 流式输出模式 */}
-          <div className="flex items-center justify-between border-t border-gray-600 pt-4">
+          <div className={`flex items-center justify-between pt-4 ${isDark ? 'border-t border-gray-600' : 'border-t border-gray-300'}`}>
             <div className="flex items-center gap-2">
-              <Radio size={18} className={streamMode === 'stream' ? 'text-blue-400' : 'text-gray-400'} />
+              <Radio size={18} className={streamMode === 'stream' ? 'text-blue-400' : (isDark ? 'text-gray-400' : 'text-gray-500')} />
               <div>
-                <div className="text-sm font-medium text-gray-200">流式输出</div>
-                <div className="text-xs text-gray-500">
+                <div className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>流式输出</div>
+                <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                   {streamMode === 'stream' ? '实时显示生成内容' : '等待完整响应后一次性显示'}
                 </div>
               </div>
@@ -329,7 +331,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             <button
               onClick={() => onStreamModeChange(streamMode === 'stream' ? 'direct' : 'stream')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                streamMode === 'stream' ? 'bg-blue-500' : 'bg-gray-600'
+                streamMode === 'stream' ? 'bg-blue-500' : (isDark ? 'bg-gray-600' : 'bg-gray-400')
               }`}
             >
               <span
@@ -341,15 +343,15 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           </div>
 
           {/* 代码风格设置 */}
-          <div className="border-t border-gray-600 pt-4">
-            <div className="text-sm font-medium text-gray-200 mb-3">代码风格设置</div>
+          <div className={`pt-4 ${isDark ? 'border-t border-gray-600' : 'border-t border-gray-300'}`}>
+            <div className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>代码风格设置</div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">代码风格</label>
+                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>代码风格</label>
                 <select
                   value={styleOptions.codeStyle}
                   onChange={(e) => onStyleChange({ ...styleOptions, codeStyle: e.target.value as StyleOptions['codeStyle'] })}
-                  className="w-full bg-gray-700 text-gray-200 text-sm rounded px-2 py-1.5 border border-gray-600"
+                  className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
                 >
                   <option value="modern">现代</option>
                   <option value="classic">经典</option>
@@ -357,11 +359,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">注释级别</label>
+                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>注释级别</label>
                 <select
                   value={styleOptions.commentLevel}
                   onChange={(e) => onStyleChange({ ...styleOptions, commentLevel: e.target.value as StyleOptions['commentLevel'] })}
-                  className="w-full bg-gray-700 text-gray-200 text-sm rounded px-2 py-1.5 border border-gray-600"
+                  className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
                 >
                   <option value="full">详细</option>
                   <option value="minimal">简洁</option>
@@ -369,14 +371,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">缩进方式</label>
+                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>缩进方式</label>
                 <select
                     value={styleOptions.indentation}
                     onChange={(e) => onStyleChange({
                       ...styleOptions,
                       indentation: e.target.value as StyleOptions['indentation']
                     })}
-                    className="w-full bg-gray-700 text-gray-200 text-sm rounded px-2 py-1.5 border border-gray-600"
+                    className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
                 >
                   <option value="auto">智能</option>
                   <option value="spaces2">2空格</option>
@@ -395,16 +397,16 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           <select
               value={model}
               onChange={(e) => onModelChange(e.target.value as ModelType)}
-              className="bg-gray-700 text-gray-200 text-sm rounded-lg px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-blue-500"
+              className={`text-sm rounded-lg px-3 py-1.5 border focus:outline-none focus:border-blue-500 ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
           >
-            <option value="deepseek" className="hover:bg-gray-600 transition-colors">DeepSeek</option>
-            <option value="kimi" className="hover:bg-gray-600 transition-colors">Kimi</option>
-            <option value="glm" className="hover:bg-gray-600 transition-colors">GLM</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="kimi">Kimi</option>
+            <option value="glm">GLM</option>
           </select>
           <button
               ref={suggestionsButtonRef}
               onClick={() => setShowSuggestions(!showSuggestions)}
-              className={`p-1.5 rounded-lg transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700'}`}
+              className={`p-1.5 rounded-lg transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200'}`}`}
               title="智能推荐"
           >
             <Sparkles size={18}/>
@@ -413,7 +415,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           <button
               ref={settingsButtonRef}
               onClick={() => setShowSettings(!showSettings)}
-              className={`p-1.5 rounded-lg transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-blue-400 hover:bg-gray-700'}`}
+              className={`p-1.5 rounded-lg transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}`}
               title="设置"
           >
             <Settings size={18}/>
@@ -440,7 +442,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
         <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600' : 'text-gray-700 hover:text-gray-900 bg-gray-200 hover:bg-gray-300'}`}
         >
           <Upload size={16} />
           上传文件
@@ -459,7 +461,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             placeholder={simpleQAMode.enabled ? "输入问题，获得简洁回答..." : "思考后再回答你的问题..."}
-            className="w-full bg-gray-700 text-gray-100 rounded-xl px-4 py-3 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+            className={`w-full rounded-xl px-4 py-3 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed ${isDark ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-gray-900 placeholder-gray-400'}`}
             rows={1}
             disabled={isLoading}
           />

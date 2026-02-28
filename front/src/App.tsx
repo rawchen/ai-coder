@@ -23,7 +23,7 @@ import {
 } from './types';
 import { callAI, analyzeProjectFiles, extractCodeBlocks, detectLanguage } from './services/api';
 import { saveConversations, loadConversations, saveProjectFiles, loadProjectFiles, saveSettings, loadSettings, generateId, addFileHistory, saveCurrentConversationId, loadCurrentConversationId } from './services/storage';
-import { calculateDiff, exportAsZip, exportAsPdf, exportConversationImage, copyToClipboard } from './services/utils';
+import { calculateDiff, exportAsPdf, exportConversationImage, copyToClipboard } from './services/utils';
 import { PanelLeftClose, PanelRightClose, FolderOpen, MessageSquare, GitCompare, File, X, Settings, ChevronUp, ChevronDown } from 'lucide-react';
 
 type RightPanelTab = 'files' | 'diff';
@@ -119,6 +119,7 @@ function App() {
   const [streamComplete, setStreamComplete] = useState(false);
   const [showCompleteAnimation, setShowCompleteAnimation] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isDark, setIsDark] = useState(true);
   // 使用函数式初始化，根据设备类型设置初始状态
   const [leftPanelOpen, setLeftPanelOpen] = useState(() => getDefaultPanelStates().leftOpen);
   const [rightPanelOpen, setRightPanelOpen] = useState(() => getDefaultPanelStates().rightOpen);
@@ -142,8 +143,11 @@ function App() {
   // 获取当前对话
   const currentConversation = conversations.find(c => c.id === currentConversationId);
 
-  // 页面加载完成后聚焦输入框，并滚动到底部
+  // 页面加载完成后聚焦输入框，并滚动到底部，初始化主题
   useEffect(() => {
+    // 初始化默认为黑夜模式
+    document.documentElement.classList.add('dark');
+    
     setTimeout(() => {
       chatInputRef.current?.focus();
       // 滚动对话到底部
@@ -788,20 +792,6 @@ function App() {
   }, []);
 
   // 导出功能
-  const handleExportZip = useCallback(async () => {
-    if (projectFiles.length === 0) {
-      alert('没有项目文件可导出');
-      return;
-    }
-    const files = projectFiles.map(f => ({ name: f.name, content: f.content }));
-    try {
-      await exportAsZip(files, 'project');
-    } catch (error) {
-      console.error('ZIP导出失败:', error);
-      alert('导出失败，请稍后重试');
-    }
-  }, [projectFiles]);
-
   const handleExportPdf = useCallback(() => {
     if (!currentConversation) {
       alert('没有对话内容可导出');
@@ -896,20 +886,33 @@ function App() {
     }
   }, []);
 
+  // 主题切换
+  const handleToggleTheme = useCallback(() => {
+    setIsDark(prev => !prev);
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
   return (
-      <div className="h-[100dvh] flex flex-col bg-gray-900 text-gray-100">
+      <div className={`h-[100dvh] flex flex-col ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
         {/* 头部 */}
         <Header
             onExportPdf={handleExportPdf}
-            onExportZip={handleExportZip}
             onExportImage={handleExportImage}
+            onToggleTheme={handleToggleTheme}
+            isDark={isDark}
         />
 
         {/* 主体 */}
         <div className="flex-1 flex overflow-hidden">
           {/* 左侧边栏 - 对话列表 */}
           <div
-              className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden border-r border-gray-700 bg-gray-800 flex flex-col flex-shrink-0`}
+              className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden border-r flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               style={{ width: leftPanelOpen ? `${leftWidth}px` : '0px' }}
           >
             <ConversationList
@@ -918,6 +921,7 @@ function App() {
                 onSelect={setCurrentConversationId}
                 onNew={createNewConversation}
                 onDelete={deleteConversation}
+                isDark={isDark}
             />
           </div>
 
@@ -925,7 +929,7 @@ function App() {
           {leftPanelOpen && (
               <div
                   ref={leftResizerRef}
-                  className="w-1 cursor-col-resize bg-gray-700 hover:bg-blue-500 transition-colors flex-shrink-0"
+                  className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
                   style={{ cursor: 'col-resize' }}
               />
           )}
@@ -933,16 +937,16 @@ function App() {
           {/* 中间区域 - 聊天 */}
           <div className="flex-1 flex flex-col min-w-0 relative">
             {/* 面板切换按钮 */}
-            <div className="flex items-center justify-between px-2 py-1 bg-gray-800/50 border-b border-gray-700">
+            <div className={`flex items-center justify-between px-2 py-1 border-b ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100/50 border-gray-200'}`}>
               <button
                   onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-                  className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                  className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title={leftPanelOpen ? '隐藏对话列表' : '显示对话列表'}
               >
                 <PanelLeftClose size={18} className={leftPanelOpen ? '' : 'rotate-180'} />
               </button>
 
-              <div className="text-sm text-gray-400 flex items-center gap-2">
+              <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 {currentConversation ? currentConversation.title : '选择或创建对话'}
                 {responseMode === 'simple' ? (
                     <span className="px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
@@ -958,7 +962,7 @@ function App() {
               <div className="flex items-center gap-1">
                 <button
                     onClick={() => setRightPanelOpen(!rightPanelOpen)}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                    className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                     title={rightPanelOpen ? '隐藏文件面板' : '显示文件面板'}
                 >
                   <PanelRightClose size={18} className={rightPanelOpen ? '' : 'rotate-180'} />
@@ -974,6 +978,7 @@ function App() {
                       message={message}
                       onApplyCode={applyCode}
                       onCopyCode={copyToClipboard}
+                      isDark={isDark}
                   />
               ))}
 
@@ -989,6 +994,7 @@ function App() {
                           reasoning_content: streamingReasoningContent,
                           thinking_time: currentThinkingTime
                         }}
+                        isDark={isDark}
                     />
                   </>
               )}
@@ -996,9 +1002,9 @@ function App() {
               {/* 空状态 */}
               {!currentConversation && (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center text-gray-500">
+                    <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                       <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium text-gray-400 mb-2">欢迎使用 AiCoder</h3>
+                      <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>欢迎使用 AiCoder</h3>
                       <p className="text-sm mb-4">智能代码生成 · 多轮对话优化 · 差异化对比</p>
                       <button
                           onClick={createNewConversation}
@@ -1015,7 +1021,7 @@ function App() {
                   <div className="absolute right-4 bottom-36">
                     <button
                         onClick={scrollNavDirection === 'up' ? scrollToTop : scrollToBottom}
-                        className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 sm:p-2.5"
+                        className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} text-white dark:text-white light:text-gray-900 p-2 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 sm:p-2.5`}
                         title={scrollNavDirection === 'up' ? '回到顶部' : '到底部'}
                     >
                       {scrollNavDirection === 'up' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -1044,6 +1050,7 @@ function App() {
                 simpleQAMode={simpleQAMode}
                 onSimpleQAModeChange={setSimpleQAMode}
                 streamComplete={streamComplete}
+                isDark={isDark}
             />
           </div>
 
@@ -1051,24 +1058,24 @@ function App() {
           {rightPanelOpen && (
               <div
                   ref={rightResizerRef}
-                  className="w-1 cursor-col-resize bg-gray-700 hover:bg-blue-500 transition-colors flex-shrink-0"
+                  className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
                   style={{ cursor: 'col-resize' }}
               />
           )}
 
           {/* 右侧边栏 - 文件和差异 */}
           <div
-              className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l border-gray-700 bg-gray-800 flex flex-col flex-shrink-0`}
+              className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }}
           >
             {/* 标签页 */}
-            <div className="flex border-b border-gray-700">
+            <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <button
                   onClick={() => setRightPanelTab('files')}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
                       rightPanelTab === 'files'
-                          ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800'
-                          : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                          ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                          : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
                   }`}
               >
                 <FolderOpen size={16} />
@@ -1078,8 +1085,8 @@ function App() {
                   onClick={() => setRightPanelTab('diff')}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
                       rightPanelTab === 'diff'
-                          ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800'
-                          : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                          ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                          : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
                   }`}
               >
                 <GitCompare size={16} />
@@ -1096,6 +1103,7 @@ function App() {
                       onSelectFile={setSelectedFile}
                       onDeleteFile={deleteFile}
                       onRestoreHistory={restoreHistory}
+                      isDark={isDark}
                   />
               ) : (
                   <div className="p-3">
@@ -1103,16 +1111,16 @@ function App() {
                     <div className="flex items-center justify-end mb-3">
                       <button
                           onClick={() => setDiffViewMode(prev => prev === 'split' ? 'unified' : 'split')}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors"
+                          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                       >
                         <GitCompare size={14} />
                         {diffViewMode === 'split' ? '分栏视图' : '统一视图'}
                       </button>
                     </div>
                     {currentDiff ? (
-                        <DiffViewer diff={currentDiff} viewMode={diffViewMode} />
+                        <DiffViewer diff={currentDiff} viewMode={diffViewMode} isDark={isDark} />
                     ) : (
-                        <div className="text-center text-gray-500 py-8">
+                        <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                           <GitCompare size={40} className="mx-auto mb-2 opacity-50" />
                           <p className="text-sm">暂无差异对比</p>
                           <p className="text-xs mt-1">应用代码修改后将显示差异</p>
