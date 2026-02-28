@@ -15,7 +15,7 @@ export function Header({
 }: HeaderProps) {
   return (
     <header
-      className="h-14 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-4 dark:bg-gray-900 dark:border-gray-700 light:bg-white light:border-gray-200">
+      className={`h-14 flex items-center justify-between px-4 border-b ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
       {/* Logo */}
       <div
         className="flex items-center gap-3 cursor-pointer px-2 py-1 rounded-lg transition-colors"
@@ -26,8 +26,8 @@ export function Header({
           <Code2 size={20} className="text-white"/>
         </div>
         <div>
-          <h1 className="text-lg font-bold text-white dark:text-white light:text-gray-900">AiCoder</h1>
-          <p className="text-xs text-gray-500 -mt-0.5">智能编程平台</p>
+          <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AiCoder</h1>
+          <p className={`text-xs -mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>智能创作平台</p>
         </div>
       </div>
 
@@ -36,7 +36,7 @@ export function Header({
 
         <button
           onClick={onExportImage}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 light:text-gray-600 light:hover:text-gray-900 light:hover:bg-gray-100"
+          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           title="导出为图片"
         >
           <ImageIcon size={16}/>
@@ -45,7 +45,7 @@ export function Header({
 
         <button
           onClick={onExportPdf}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 light:text-gray-600 light:hover:text-gray-900 light:hover:bg-gray-100"
+          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           title="导出 PDF"
         >
           <FileText size={16}/>
@@ -54,20 +54,19 @@ export function Header({
 
         <button
           onClick={onToggleTheme}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 light:text-gray-600 light:hover:text-gray-900 light:hover:bg-gray-100"
+          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           title={isDark ? "切换到白天模式" : "切换到夜间模式"}
         >
           {isDark ? <Sun size={16}/> : <Moon size={16}/>}
-          {/*<span className="hidden sm:inline">{isDark ? "" : ""}</span>*/}
         </button>
 
-        <div className="w-px h-6 bg-gray-700 mx-2 dark:bg-gray-700 light:bg-gray-300"/>
+        <div className={`w-px h-6 mx-2 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}/>
 
         <a
           href="https://github.com/rawchen/ai-coder"
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 light:text-gray-600 light:hover:text-gray-900 light:hover:bg-gray-100"
+          className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           title="GitHub"
         >
           <Github size={18}/>

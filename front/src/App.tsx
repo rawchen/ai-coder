@@ -1,30 +1,39 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChatInput, ChatInputRef, ChatMessage, ConversationList, DiffViewer, FileExplorer, Header } from './components';
 import {
-  Header,
-  ChatInput,
-  ChatInputRef,
-  ChatMessage,
-  FileExplorer,
-  ConversationList,
-  DiffViewer
-} from './components';
-import {
-  Message,
-  Conversation,
-  ProjectFile,
-  ModelType,
-  StyleOptions,
   CodeBlock,
+  Conversation,
   DiffResult,
   FileHistory,
+  Message,
+  ModelType,
+  ProjectFile,
   ResponseMode,
+  SimpleQAMode,
   StreamMode,
-  SimpleQAMode
+  StyleOptions
 } from './types';
-import { callAI, analyzeProjectFiles, extractCodeBlocks, detectLanguage } from './services/api';
-import { saveConversations, loadConversations, saveProjectFiles, loadProjectFiles, saveSettings, loadSettings, generateId, addFileHistory, saveCurrentConversationId, loadCurrentConversationId } from './services/storage';
-import { calculateDiff, exportAsPdf, exportConversationImage, copyToClipboard } from './services/utils';
-import { PanelLeftClose, PanelRightClose, FolderOpen, MessageSquare, GitCompare, File, X, Settings, ChevronUp, ChevronDown } from 'lucide-react';
+import { callAI, detectLanguage, extractCodeBlocks } from './services/api';
+import {
+  addFileHistory,
+  generateId,
+  loadConversations,
+  loadCurrentConversationId,
+  loadSettings,
+  saveConversations,
+  saveCurrentConversationId,
+  saveSettings
+} from './services/storage';
+import { calculateDiff, copyToClipboard, exportAsPdf, exportConversationImage } from './services/utils';
+import {
+  ChevronDown,
+  ChevronUp,
+  FolderOpen,
+  GitCompare,
+  MessageSquare,
+  PanelLeftClose,
+  PanelRightClose
+} from 'lucide-react';
 
 type RightPanelTab = 'files' | 'diff';
 
@@ -43,11 +52,11 @@ const getDeviceType = (): DeviceType => {
 const getDefaultPanelStates = () => {
   const device = getDeviceType();
   if (device === 'mobile') {
-    return { leftOpen: false, rightOpen: false };
+    return {leftOpen: false, rightOpen: false};
   } else if (device === 'ipad') {
-    return { leftOpen: true, rightOpen: false };
+    return {leftOpen: true, rightOpen: false};
   }
-  return { leftOpen: true, rightOpen: true };
+  return {leftOpen: true, rightOpen: true};
 };
 
 function App() {
@@ -119,7 +128,10 @@ function App() {
   const [streamComplete, setStreamComplete] = useState(false);
   const [showCompleteAnimation, setShowCompleteAnimation] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme ? savedTheme === 'dark' : true;
+  });
   // 使用函数式初始化，根据设备类型设置初始状态
   const [leftPanelOpen, setLeftPanelOpen] = useState(() => getDefaultPanelStates().leftOpen);
   const [rightPanelOpen, setRightPanelOpen] = useState(() => getDefaultPanelStates().rightOpen);
@@ -143,11 +155,8 @@ function App() {
   // 获取当前对话
   const currentConversation = conversations.find(c => c.id === currentConversationId);
 
-  // 页面加载完成后聚焦输入框，并滚动到底部，初始化主题
+  // 页面加载完成后聚焦输入框，并滚动到底部
   useEffect(() => {
-    // 初始化默认为黑夜模式
-    document.documentElement.classList.add('dark');
-    
     setTimeout(() => {
       chatInputRef.current?.focus();
       // 滚动对话到底部
@@ -195,7 +204,7 @@ function App() {
           container.scrollTop = container.scrollHeight;
         });
         // 检查内容是否可滚动，如果不可滚动则隐藏导航按钮
-        const { scrollHeight, clientHeight } = container;
+        const {scrollHeight, clientHeight} = container;
         const canScroll = scrollHeight > clientHeight;
         if (!canScroll) {
           setScrollNavDirection(null);
@@ -216,7 +225,7 @@ function App() {
     if (currentConversationId && conversations.length > 0) {
       setConversations(prev => prev.map(c => {
         if (c.id === currentConversationId) {
-          return { ...c, projectFiles };
+          return {...c, projectFiles};
         }
         return c;
       }));
@@ -262,7 +271,7 @@ function App() {
         return;
       }
 
-      const { scrollTop, scrollHeight, clientHeight } = container;
+      const {scrollTop, scrollHeight, clientHeight} = container;
       const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
       // 流式输出期间的特殊处理：只检测用户的主动向上滚动
@@ -499,7 +508,7 @@ function App() {
         role: m.role,
         content: m.content
       })),
-      { role: 'user', content: messageContent }
+      {role: 'user', content: messageContent}
     ];
 
     // 添加暂存文件到项目文件
@@ -526,7 +535,7 @@ function App() {
     // 添加风格选项（仅在代码生成模式）
     if (responseMode === 'code') {
       const stylePrompt = `代码风格要求: ${styleOptions.codeStyle}风格, ${styleOptions.commentLevel === 'full' ? '详细注释' : styleOptions.commentLevel === 'minimal' ? '简洁注释' : '不需要注释'}, 使用${styleOptions.indentation === 'auto' ? '智能' : styleOptions.indentation === 'spaces2' ? '2空格' : styleOptions.indentation === 'spaces4' ? '4空格' : 'Tab'}缩进`;
-      messageHistory.push({ role: 'system', content: stylePrompt });
+      messageHistory.push({role: 'system', content: stylePrompt});
     }
 
     try {
@@ -570,14 +579,14 @@ function App() {
       } : undefined;
 
       const response = await callAI(
-          messageHistory,
-          model,
-          streamCallback,
-          reasoningStreamCallback,
-          reasoningCompleteCallback,
-          useStream,
-          responseMode,
-          responseMode === 'simple' ? simpleQAMode : undefined
+        messageHistory,
+        model,
+        streamCallback,
+        reasoningStreamCallback,
+        reasoningCompleteCallback,
+        useStream,
+        responseMode,
+        responseMode === 'simple' ? simpleQAMode : undefined
       );
 
       // 标记流结束，显示完成动画
@@ -798,8 +807,8 @@ function App() {
       return;
     }
     const content = currentConversation.messages
-        .map(m => `[${m.role === 'user' ? '用户' : 'AI'}]\n${m.content}`)
-        .join('\n\n---\n\n');
+    .map(m => `[${m.role === 'user' ? '用户' : 'AI'}]\n${m.content}`)
+    .join('\n\n---\n\n');
     try {
       exportAsPdf(content, currentConversation.title);
     } catch (error) {
@@ -868,7 +877,7 @@ function App() {
       // 监听滚动完成，避免图标快速切换
       const checkScrollEnd = () => {
         if (chatContainerRef.current) {
-          const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+          const {scrollTop, scrollHeight, clientHeight} = chatContainerRef.current;
           const distanceToBottom = scrollHeight - scrollTop - clientHeight;
           if (distanceToBottom <= 1) {
             // 已经滚动到底部
@@ -888,7 +897,12 @@ function App() {
 
   // 主题切换
   const handleToggleTheme = useCallback(() => {
-    setIsDark(prev => !prev);
+    setIsDark(prev => {
+      const newIsDark = !prev;
+      // 保存到 localStorage
+      localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+      return newIsDark;
+    });
     if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
       document.documentElement.classList.add('light');
@@ -899,239 +913,241 @@ function App() {
   }, []);
 
   return (
-      <div className={`h-[100dvh] flex flex-col ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
-        {/* 头部 */}
-        <Header
-            onExportPdf={handleExportPdf}
-            onExportImage={handleExportImage}
-            onToggleTheme={handleToggleTheme}
+    <div className={`h-[100dvh] flex flex-col ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+      {/* 头部 */}
+      <Header
+        onExportPdf={handleExportPdf}
+        onExportImage={handleExportImage}
+        onToggleTheme={handleToggleTheme}
+        isDark={isDark}
+      />
+
+      {/* 主体 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧边栏 - 对话列表 */}
+        <div
+          className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden border-r flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+          style={{width: leftPanelOpen ? `${leftWidth}px` : '0px'}}
+        >
+          <ConversationList
+            conversations={conversations}
+            currentId={currentConversationId}
+            onSelect={setCurrentConversationId}
+            onNew={createNewConversation}
+            onDelete={deleteConversation}
             isDark={isDark}
-        />
+          />
+        </div>
 
-        {/* 主体 */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* 左侧边栏 - 对话列表 */}
+        {/* 左侧分隔条 */}
+        {leftPanelOpen && (
           <div
-              className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden border-r flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-              style={{ width: leftPanelOpen ? `${leftWidth}px` : '0px' }}
-          >
-            <ConversationList
-                conversations={conversations}
-                currentId={currentConversationId}
-                onSelect={setCurrentConversationId}
-                onNew={createNewConversation}
-                onDelete={deleteConversation}
-                isDark={isDark}
-            />
-          </div>
+            ref={leftResizerRef}
+            className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
+            style={{cursor: 'col-resize'}}
+          />
+        )}
 
-          {/* 左侧分隔条 */}
-          {leftPanelOpen && (
-              <div
-                  ref={leftResizerRef}
-                  className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
-                  style={{ cursor: 'col-resize' }}
-              />
-          )}
+        {/* 中间区域 - 聊天 */}
+        <div className="flex-1 flex flex-col min-w-0 relative">
+          {/* 面板切换按钮 */}
+          <div
+            className={`flex items-center justify-between px-2 py-1 border-b ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100/50 border-gray-200'}`}>
+            <button
+              onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+              className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+              title={leftPanelOpen ? '隐藏对话列表' : '显示对话列表'}
+            >
+              <PanelLeftClose size={18} className={leftPanelOpen ? '' : 'rotate-180'}/>
+            </button>
 
-          {/* 中间区域 - 聊天 */}
-          <div className="flex-1 flex flex-col min-w-0 relative">
-            {/* 面板切换按钮 */}
-            <div className={`flex items-center justify-between px-2 py-1 border-b ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100/50 border-gray-200'}`}>
-              <button
-                  onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-                  className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                  title={leftPanelOpen ? '隐藏对话列表' : '显示对话列表'}
-              >
-                <PanelLeftClose size={18} className={leftPanelOpen ? '' : 'rotate-180'} />
-              </button>
-
-              <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {currentConversation ? currentConversation.title : '选择或创建对话'}
-                {responseMode === 'simple' ? (
-                    <span className="px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+            <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {currentConversation ? currentConversation.title : '选择或创建对话'}
+              {responseMode === 'simple' ? (
+                <span className="px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
                   简单模式
                 </span>
-                ) : (
-                    <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full">
+              ) : (
+                <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full">
                   思考模式
                 </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                    onClick={() => setRightPanelOpen(!rightPanelOpen)}
-                    className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                    title={rightPanelOpen ? '隐藏文件面板' : '显示文件面板'}
-                >
-                  <PanelRightClose size={18} className={rightPanelOpen ? '' : 'rotate-180'} />
-                </button>
-              </div>
-            </div>
-
-            {/* 聊天消息区 */}
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
-              {currentConversation?.messages.map(message => (
-                  <ChatMessage
-                      key={message.id}
-                      message={message}
-                      onApplyCode={applyCode}
-                      onCopyCode={copyToClipboard}
-                      isDark={isDark}
-                  />
-              ))}
-
-              {/* 流式输出显示 */}
-              {isLoading && (streamingContent || streamingReasoningContent) && (
-                  <>
-                    <ChatMessage
-                        message={{
-                          id: 'streaming',
-                          role: 'assistant',
-                          content: streamingContent,
-                          timestamp: new Date(),
-                          reasoning_content: streamingReasoningContent,
-                          thinking_time: currentThinkingTime
-                        }}
-                        isDark={isDark}
-                    />
-                  </>
-              )}
-
-              {/* 空状态 */}
-              {!currentConversation && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
-                      <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>欢迎使用 AiCoder</h3>
-                      <p className="text-sm mb-4">智能代码生成 · 多轮对话优化 · 差异化对比</p>
-                      <button
-                          onClick={createNewConversation}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
-                      >
-                        开始新对话
-                      </button>
-                    </div>
-                  </div>
-              )}
-
-              {/* 滚动导航按钮 */}
-              {scrollNavDirection && currentConversation && (
-                  <div className="absolute right-4 bottom-36">
-                    <button
-                        onClick={scrollNavDirection === 'up' ? scrollToTop : scrollToBottom}
-                        className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} text-white dark:text-white light:text-gray-900 p-2 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 sm:p-2.5`}
-                        title={scrollNavDirection === 'up' ? '回到顶部' : '到底部'}
-                    >
-                      {scrollNavDirection === 'up' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
               )}
             </div>
 
-            {/* 输入区 */}
-            <ChatInput
-                ref={chatInputRef}
-                onSend={sendMessage}
-                onSendFiles={() => sendMessage('')}
-                onFileUpload={handleFileUpload}
-                onRemoveStagedFile={removeStagedFile}
-                stagedFiles={stagedFiles}
-                model={model}
-                onModelChange={setModel}
-                styleOptions={styleOptions}
-                onStyleChange={setStyleOptions}
-                isLoading={isLoading}
-                responseMode={responseMode}
-                onResponseModeChange={setResponseMode}
-                streamMode={streamMode}
-                onStreamModeChange={setStreamMode}
-                simpleQAMode={simpleQAMode}
-                onSimpleQAModeChange={setSimpleQAMode}
-                streamComplete={streamComplete}
-                isDark={isDark}
-            />
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                title={rightPanelOpen ? '隐藏文件面板' : '显示文件面板'}
+              >
+                <PanelRightClose size={18} className={rightPanelOpen ? '' : 'rotate-180'}/>
+              </button>
+            </div>
           </div>
 
-          {/* 右侧分隔条 */}
-          {rightPanelOpen && (
-              <div
-                  ref={rightResizerRef}
-                  className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
-                  style={{ cursor: 'col-resize' }}
+          {/* 聊天消息区 */}
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
+            {currentConversation?.messages.map(message => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                onApplyCode={applyCode}
+                onCopyCode={copyToClipboard}
+                isDark={isDark}
               />
-          )}
+            ))}
 
-          {/* 右侧边栏 - 文件和差异 */}
+            {/* 流式输出显示 */}
+            {isLoading && (streamingContent || streamingReasoningContent) && (
+              <>
+                <ChatMessage
+                  message={{
+                    id: 'streaming',
+                    role: 'assistant',
+                    content: streamingContent,
+                    timestamp: new Date(),
+                    reasoning_content: streamingReasoningContent,
+                    thinking_time: currentThinkingTime
+                  }}
+                  isDark={isDark}
+                />
+              </>
+            )}
+
+            {/* 空状态 */}
+            {!currentConversation && (
+              <div className="h-full flex items-center justify-center">
+                <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <MessageSquare size={48} className="mx-auto mb-4 opacity-50"/>
+                  <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>欢迎使用
+                    AiCoder</h3>
+                  <p className="text-sm mb-4">智能代码生成 · 多轮对话优化 · 差异化对比</p>
+                  <button
+                    onClick={createNewConversation}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                  >
+                    开始新对话
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 滚动导航按钮 */}
+            {scrollNavDirection && currentConversation && (
+              <div className="absolute right-4 bottom-36">
+                <button
+                  onClick={scrollNavDirection === 'up' ? scrollToTop : scrollToBottom}
+                  className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-400 hover:bg-gray-500'} text-white dark:text-white light:text-gray-900 p-2 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 sm:p-2.5`}
+                  title={scrollNavDirection === 'up' ? '回到顶部' : '到底部'}
+                >
+                  {scrollNavDirection === 'up' ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 输入区 */}
+          <ChatInput
+            ref={chatInputRef}
+            onSend={sendMessage}
+            onSendFiles={() => sendMessage('')}
+            onFileUpload={handleFileUpload}
+            onRemoveStagedFile={removeStagedFile}
+            stagedFiles={stagedFiles}
+            model={model}
+            onModelChange={setModel}
+            styleOptions={styleOptions}
+            onStyleChange={setStyleOptions}
+            isLoading={isLoading}
+            responseMode={responseMode}
+            onResponseModeChange={setResponseMode}
+            streamMode={streamMode}
+            onStreamModeChange={setStreamMode}
+            simpleQAMode={simpleQAMode}
+            onSimpleQAModeChange={setSimpleQAMode}
+            streamComplete={streamComplete}
+            isDark={isDark}
+          />
+        </div>
+
+        {/* 右侧分隔条 */}
+        {rightPanelOpen && (
           <div
-              className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-              style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }}
-          >
-            {/* 标签页 */}
-            <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <button
-                  onClick={() => setRightPanelTab('files')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
-                      rightPanelTab === 'files'
-                          ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
-                          : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
-                  }`}
-              >
-                <FolderOpen size={16} />
-                文件
-              </button>
-              <button
-                  onClick={() => setRightPanelTab('diff')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
-                      rightPanelTab === 'diff'
-                          ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
-                          : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
-                  }`}
-              >
-                <GitCompare size={16} />
-                差异
-              </button>
-            </div>
+            ref={rightResizerRef}
+            className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
+            style={{cursor: 'col-resize'}}
+          />
+        )}
 
-            {/* 内容区 */}
-            <div className="flex-1 overflow-y-auto">
-              {rightPanelTab === 'files' ? (
-                  <FileExplorer
-                      files={projectFiles}
-                      selectedFile={selectedFile}
-                      onSelectFile={setSelectedFile}
-                      onDeleteFile={deleteFile}
-                      onRestoreHistory={restoreHistory}
-                      isDark={isDark}
-                  />
-              ) : (
-                  <div className="p-3">
-                    {/* 差异视图切换按钮 */}
-                    <div className="flex items-center justify-end mb-3">
-                      <button
-                          onClick={() => setDiffViewMode(prev => prev === 'split' ? 'unified' : 'split')}
-                          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                      >
-                        <GitCompare size={14} />
-                        {diffViewMode === 'split' ? '分栏视图' : '统一视图'}
-                      </button>
-                    </div>
-                    {currentDiff ? (
-                        <DiffViewer diff={currentDiff} viewMode={diffViewMode} isDark={isDark} />
-                    ) : (
-                        <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          <GitCompare size={40} className="mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">暂无差异对比</p>
-                          <p className="text-xs mt-1">应用代码修改后将显示差异</p>
-                        </div>
-                    )}
+        {/* 右侧边栏 - 文件和差异 */}
+        <div
+          className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+          style={{width: rightPanelOpen ? `${rightWidth}px` : '0px'}}
+        >
+          {/* 标签页 */}
+          <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            <button
+              onClick={() => setRightPanelTab('files')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
+                rightPanelTab === 'files'
+                  ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                  : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
+              }`}
+            >
+              <FolderOpen size={16}/>
+              文件
+            </button>
+            <button
+              onClick={() => setRightPanelTab('diff')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
+                rightPanelTab === 'diff'
+                  ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                  : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
+              }`}
+            >
+              <GitCompare size={16}/>
+              差异
+            </button>
+          </div>
+
+          {/* 内容区 */}
+          <div className="flex-1 overflow-y-auto">
+            {rightPanelTab === 'files' ? (
+              <FileExplorer
+                files={projectFiles}
+                selectedFile={selectedFile}
+                onSelectFile={setSelectedFile}
+                onDeleteFile={deleteFile}
+                onRestoreHistory={restoreHistory}
+                isDark={isDark}
+              />
+            ) : (
+              <div className="p-3">
+                {/* 差异视图切换按钮 */}
+                <div className="flex items-center justify-end mb-3">
+                  <button
+                    onClick={() => setDiffViewMode(prev => prev === 'split' ? 'unified' : 'split')}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  >
+                    <GitCompare size={14}/>
+                    {diffViewMode === 'split' ? '分栏视图' : '统一视图'}
+                  </button>
+                </div>
+                {currentDiff ? (
+                  <DiffViewer diff={currentDiff} viewMode={diffViewMode} isDark={isDark}/>
+                ) : (
+                  <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <GitCompare size={40} className="mx-auto mb-2 opacity-50"/>
+                    <p className="text-sm">暂无差异对比</p>
+                    <p className="text-xs mt-1">应用代码修改后将显示差异</p>
                   </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
   );
 }
 
