@@ -926,7 +926,7 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧边栏 - 对话列表 */}
         <div
-          className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden border-r flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+          className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
           style={{width: leftPanelOpen ? `${leftWidth}px` : '0px'}}
         >
           <ConversationList
@@ -943,8 +943,7 @@ function App() {
         {leftPanelOpen && (
           <div
             ref={leftResizerRef}
-            className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
-            style={{cursor: 'col-resize'}}
+            className={`w-px cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
           />
         )}
 
@@ -1074,8 +1073,7 @@ function App() {
         {rightPanelOpen && (
           <div
             ref={rightResizerRef}
-            className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
-            style={{cursor: 'col-resize'}}
+            className={`w-px cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
           />
         )}
 

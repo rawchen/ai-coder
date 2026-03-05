@@ -20,4 +20,8 @@ public class Constants {
     public final static String GLM_API_KEY = "xxx";
     public final static String GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
     public static final String GLM_MODEL = "glm-4.7";
+
+    public final static String GPT_API_KEY = "sk-xxx";
+    public final static String GPT_BASE_URL = "https://api.openai-hub.com/v1";
+    public static final String GPT_MODEL = "gpt-4o";
 }

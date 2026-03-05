@@ -29,7 +29,7 @@ export interface Conversation {
 }
 
 // 模型类型
-export type ModelType = 'deepseek' | 'kimi' | 'glm';
+export type ModelType = 'deepseek' | 'kimi' | 'glm' | 'gpt';
 
 // 项目文件类型
 export interface ProjectFile {

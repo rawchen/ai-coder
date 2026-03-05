@@ -148,6 +148,10 @@ public class MainController {
                 baseUrl = Constants.GLM_BASE_URL;
                 apiKey = Constants.GLM_API_KEY;
                 modelName = Constants.GLM_MODEL;
+            } else if ("gpt".equals(model)) {
+                baseUrl = Constants.GPT_BASE_URL;
+                apiKey = Constants.GPT_API_KEY;
+                modelName = Constants.GPT_MODEL;
             } else {
                 return ResponseEntity.badRequest().build();
             }
@@ -173,8 +177,9 @@ public class MainController {
                     body.put("max_tokens", "simple".equals(responseMode) ? 1024 * 8 : 1024 * 64);
                     Map<String, String> thinking = new HashMap<>();
                     thinking.put("type", "simple".equals(responseMode) ? "disabled" : "enabled");
-                    body.put("thinking", thinking);
-
+                    if (!"gpt".equals(model)) {
+                        body.put("thinking", thinking);
+                    }
                     String jsonBody = JSONUtil.toJsonStr(body);
                     log.info("AI 请求体: {}", jsonBody);
 

@@ -1,4 +1,4 @@
-import { ModelType, ApiResponse, SimpleQAMode, ResponseMode } from '../types';
+import { ApiResponse, ModelType, ResponseMode, SimpleQAMode } from '../types';
 
 // API 配置类型定义
 interface ApiConfig {
@@ -13,28 +13,16 @@ interface ApiConfig {
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
 // 代码生成模式系统提示词
-const CODE_SYSTEM_PROMPT = `你是一个专业的代码生成助手，擅长：
-1. 根据用户描述生成高质量的代码
-2. 分析和修改现有代码
-3. 解答软件开发相关问题
-4. 支持多种编程语言
+const CODE_SYSTEM_PROMPT = `你是一个专业的思考型智能助手，专注于回答全方面的问题。
 
 回复规则：
-- 代码必须用 \`\`\`language 格式包裹，并在开头第一行使用双斜杠注明文件名（如 \`\`\`javascript + 换行 + // filename.js）
-- 提供清晰的注释和解释
-- 如果需要修改多个文件，分别给出每个文件的代码
-- 保持代码风格一致，遵循最佳实践`;
+- 如果涉及代码，需要生成完整的代码项目，保持代码风格一致，遵循最佳实践，代码必须用 \`\`\`language 格式包裹，并在开头第一行使用双斜杠注明文件名（如 \`\`\`javascript + 换行 + // filename.js）`;
 
 // 简单问答模式系统提示词
-const SIMPLE_QA_SYSTEM_PROMPT = `你是一个智能助手，专注于简洁明了地回答问题。
+const SIMPLE_QA_SYSTEM_PROMPT = `你是一个智能助手，专注于回答全方面的问题。
 
 回复规则：
-- 直接回答问题，不需要生成完整的代码项目
-- 如果涉及代码，提供简洁的代码片段或示例即可
-- 代码必须用 \`\`\`language 格式包裹，并在开头第一行使用双斜杠注明文件名（如 \`\`\`javascript + 换行 + // filename.js），一个对话中代码片段文件名唯一
-- 回答要简洁，避免冗长的解释
-- 使用清晰的格式组织内容
-- 对于简单问题，给出简短的答案即可`;
+- 如果涉及代码，不需要生成完整的代码项目，提供代码片段或示例即可，代码必须用 \`\`\`language 格式包裹，并在开头第一行使用双斜杠注明文件名（如 \`\`\`javascript + 换行 + // filename.js）`;
 
 // 获取系统提示词
 function getSystemPrompt(responseMode: ResponseMode, simpleQAMode?: SimpleQAMode): string {
@@ -74,11 +62,11 @@ export async function callAI(
   }
 
   const requestMessages = [
-    { role: 'system', content: systemPrompt },
+    {role: 'system', content: systemPrompt},
     ...messages
   ];
 
-  console.log('callAI 请求参数:', { model, stream, responseMode, messageCount: requestMessages.length });
+  console.log('callAI 请求参数:', {model, stream, responseMode, messageCount: requestMessages.length});
 
   try {
     const response = await fetch(`${BACKEND_URL}/ai/chat`, {
@@ -99,7 +87,7 @@ export async function callAI(
     if (!response.ok) {
       const error = await response.text();
       console.error('callAI 响应失败:', error);
-      return { success: false, error: `API 请求失败: ${error}` };
+      return {success: false, error: `API 请求失败: ${error}`};
     }
 
     // 处理流式响应
@@ -114,14 +102,14 @@ export async function callAI(
       let reasoningEndTime = 0;
 
       while (true) {
-        const { done, value } = await reader.read();
+        const {done, value} = await reader.read();
         if (done) {
           console.log('流式响应读取完成');
           break;
         }
 
         // 解码并追加到缓冲区
-        buffer += decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, {stream: true});
         console.log('收到数据块，当前缓冲区长度:', buffer.length);
 
         // 检查是否包含错误信息
@@ -129,7 +117,7 @@ export async function callAI(
           console.error('流式响应中检测到错误:', buffer);
           const errorMatch = buffer.match(/Error: (.+)/);
           if (errorMatch) {
-            return { success: false, error: errorMatch[1].trim() };
+            return {success: false, error: errorMatch[1].trim()};
           }
         }
 
@@ -240,15 +228,20 @@ export async function callAI(
         : 0;
 
       console.log('流式响应处理完成，总内容长度:', fullContent.length, '思考内容长度:', fullReasoningContent.length, '思考时间:', thinkingTime);
-      return { success: true, content: fullContent, reasoning_content: fullReasoningContent, thinking_time: thinkingTime };
+      return {
+        success: true,
+        content: fullContent,
+        reasoning_content: fullReasoningContent,
+        thinking_time: thinkingTime
+      };
     } else {
       // 处理非流式响应
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '';
-      return { success: true, content };
+      return {success: true, content};
     }
   } catch (error) {
-    return { success: false, error: `请求失败: ${error}` };
+    return {success: false, error: `请求失败: ${error}`};
   }
 }
 
