@@ -27,13 +27,14 @@ import {
 import { calculateDiff, copyToClipboard, exportAsPdf, exportConversationImage } from './services/utils';
 import {
   ChevronDown,
-  ChevronUp,
   FolderOpen,
   GitCompare,
   MessageSquare,
   PanelLeftClose,
   PanelRightClose
 } from 'lucide-react';
+import { useScrollStore } from './stores/scrollStore';
+import { scrollEventBus } from './services/eventBus';
 
 type RightPanelTab = 'files' | 'diff';
 
@@ -127,7 +128,6 @@ function App() {
   const [currentThinkingTime, setCurrentThinkingTime] = useState(0);
   const [streamComplete, setStreamComplete] = useState(false);
   const [showCompleteAnimation, setShowCompleteAnimation] = useState(false);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [isDark, setIsDark] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme ? savedTheme === 'dark' : true;
@@ -141,9 +141,7 @@ function App() {
   const [stagedFiles, setStagedFiles] = useState<ProjectFile[]>([]);
   const [leftWidth, setLeftWidth] = useState(256);
   const [rightWidth, setRightWidth] = useState(320);
-  const [scrollNavDirection, setScrollNavDirection] = useState<'up' | 'down' | null>(null);
   const justSwitchedConversation = useRef(false);
-  const isScrollingByNav = useRef(false);
   const isLockedAtBottom = useRef(false);
   const isLoadingRef = useRef(false);
   const lastScrollTop = useRef(0);
@@ -151,20 +149,89 @@ function App() {
   const rightResizerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
+  const { showScrollBottomButton, setShowScrollBottomButton } = useScrollStore();
 
   // 获取当前对话
   const currentConversation = conversations.find(c => c.id === currentConversationId);
+
+  // 检查是否在底部的函数（距离底部300px认为在底部）
+  const checkIsAtBottom = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, offsetHeight } = container;
+    // 距离底部小于300px，认为在底部
+    const isAtBottom = scrollTop + offsetHeight > scrollHeight - 300;
+    setShowScrollBottomButton(!isAtBottom);
+  }, [setShowScrollBottomButton]);
+
+  // 滚动到底部的函数
+  const scrollToBottom = useCallback((event?: string) => {
+    const container = chatContainerRef.current;
+    if (container) {
+      event?.slice(); // 事件参数处理
+      container.scrollTop = container.scrollHeight;
+      // 滚动到底部时，锁定在底部
+      isLockedAtBottom.current = true;
+    }
+  }, []);
+
+  // 订阅滚动事件
+  useEffect(() => {
+    const handleScrollEvent = (event: any) => {
+      const { method } = event;
+      if (method === 'clickButtonToScrollToBottom' || method === 'forceScrollToBottomTrigger') {
+        scrollToBottom(method);
+      }
+    };
+    const unsubscribe = scrollEventBus.subscribe(handleScrollEvent);
+    return unsubscribe;
+  }, [scrollToBottom]);
+
+  // 滚动时更新状态
+  const handleScroll = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    
+    const { scrollTop, scrollHeight, offsetHeight } = container;
+    const distanceToBottom = scrollHeight - scrollTop - offsetHeight;
+
+    // 流式输出期间的特殊处理：只检测用户的主动向上滚动
+    if (isLoadingRef.current) {
+      // 判断是否用户主动向上滚动（scrollTop 减小）
+      const isUserScrollingUp = scrollTop < lastScrollTop.current;
+
+      if (isUserScrollingUp) {
+        // 用户向上滚动，退出底部锁定
+        isLockedAtBottom.current = false;
+      } else if (distanceToBottom < 300 && !isLockedAtBottom.current) {
+        // 如果用户滚回底部附近（距离<300px），重新锁定
+        isLockedAtBottom.current = true;
+      }
+
+      lastScrollTop.current = scrollTop;
+      return;
+    }
+
+    // 非流式输出期间的正常逻辑
+    lastScrollTop.current = scrollTop;
+    checkIsAtBottom();
+  }, [checkIsAtBottom]);
+
+  // 监听滚动事件
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   // 页面加载完成后聚焦输入框，并滚动到底部
   useEffect(() => {
     setTimeout(() => {
       chatInputRef.current?.focus();
-      // 滚动对话到底部
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
+      scrollToBottom();
     }, 100);
-  }, []);
+  }, [scrollToBottom]);
 
   // 保存设置到本地存储
   useEffect(() => {
@@ -197,28 +264,15 @@ function App() {
       // 重置上次滚动位置
       lastScrollTop.current = 0;
       // 切换会话时滚动到底部
-      if (chatContainerRef.current) {
-        const container = chatContainerRef.current;
-        // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
-        requestAnimationFrame(() => {
-          container.scrollTop = container.scrollHeight;
-        });
-        // 检查内容是否可滚动，如果不可滚动则隐藏导航按钮
-        const {scrollHeight, clientHeight} = container;
-        const canScroll = scrollHeight > clientHeight;
-        if (!canScroll) {
-          setScrollNavDirection(null);
-        } else {
-          // 如果可滚动，默认显示向上箭头（因为在底部）
-          setScrollNavDirection('up');
-        }
-      }
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
       // 延迟重置标志，避免自动滚动到底部
       setTimeout(() => {
         justSwitchedConversation.current = false;
       }, 100);
     }
-  }, [currentConversationId]);
+  }, [currentConversationId, scrollToBottom]);
 
   // 保存当前会话的文件到本地存储
   useEffect(() => {
@@ -232,20 +286,15 @@ function App() {
     }
   }, [projectFiles, currentConversationId]);
 
-  // 自动滚动到底部（仅在 autoScroll 为 true 时）
+  // 自动滚动到底部
   useEffect(() => {
     // 如果刚切换了会话，不自动滚动到底部
     if (justSwitchedConversation.current) {
       return;
     }
-    // 如果正在通过导航按钮滚动，不执行自动滚动
-    if (isScrollingByNav.current) {
-      return;
-    }
     // 流式输出期间，只在锁定状态时滚动
     if (isLoadingRef.current) {
-      if (chatContainerRef.current && autoScroll && isLockedAtBottom.current) {
-        // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+      if (isLockedAtBottom.current) {
         requestAnimationFrame(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -254,103 +303,9 @@ function App() {
       }
       return;
     }
-    // 非流式输出期间的正常逻辑
-    if (chatContainerRef.current && autoScroll) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [currentConversation?.messages, streamingContent, streamingReasoningContent]);
-
-  // 监听滚动事件，判断用户是否手动滚动
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      // 如果正在通过导航按钮滚动，不处理滚动事件
-      if (isScrollingByNav.current) {
-        return;
-      }
-
-      const {scrollTop, scrollHeight, clientHeight} = container;
-      const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-
-      // 流式输出期间的特殊处理：只检测用户的主动向上滚动
-      if (isLoadingRef.current) {
-        // 判断是否用户主动向上滚动（scrollTop 减小）
-        const isUserScrollingUp = scrollTop < lastScrollTop.current;
-
-        if (isUserScrollingUp) {
-          // 用户向上滚动，退出底部锁定
-          isLockedAtBottom.current = false;
-        }
-
-        // 如果用户滚回底部附近（距离<50px），重新锁定并立即滚动
-        if (distanceToBottom < 50 && !isLockedAtBottom.current) {
-          isLockedAtBottom.current = true;
-          // 立即滚动到底部，因为自动滚动 useEffect 可能不会触发
-          requestAnimationFrame(() => {
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-            }
-          });
-        }
-
-        // 更新上次的滚动位置
-        lastScrollTop.current = scrollTop;
-        return;
-      }
-
-      // 非流式输出期间的正常逻辑
-
-      // 如果锁定在底部，不修改 autoScroll，保持在底部
-      if (isLockedAtBottom.current) {
-        // 如果用户向上滚动超过一定距离（50px），取消底部锁定
-        if (distanceToBottom > 50) {
-          isLockedAtBottom.current = false;
-          setAutoScroll(false);
-        }
-        return;
-      }
-
-      // 如果用户向上滚动超过一定距离（10px），停止自动滚动
-      if (distanceToBottom > 10) {
-        setAutoScroll(false);
-      } else {
-        // 如果用户滚回到底部，恢复自动滚动
-        setAutoScroll(true);
-        // 滚动到底部，确保用户看到最新内容
-        if (distanceToBottom <= 10) {
-          container.scrollTop = scrollHeight;
-        }
-      }
-
-      // 判断是否需要显示导航按钮以及显示哪个方向
-      // 只在内容超出容器高度时显示
-      const canScroll = scrollHeight > clientHeight;
-      if (!canScroll) {
-        setScrollNavDirection(null);
-        return;
-      }
-
-      // 判断当前位置：如果在顶部附近（小于30%），显示向下箭头
-      // 如果在底部附近（距离底部小于30%），显示向上箭头
-      // 否则显示向上箭头（默认）
-      const threshold = clientHeight * 0.3;
-      if (scrollTop < threshold) {
-        setScrollNavDirection('down');
-      } else if (distanceToBottom < threshold) {
-        setScrollNavDirection('up');
-      } else {
-        setScrollNavDirection('up');
-      }
-
-      // 更新上次的滚动位置
-      lastScrollTop.current = scrollTop;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
+    // 非流式输出期间的正常逻辑：检查是否在底部
+    checkIsAtBottom();
+  }, [currentConversation?.messages, streamingContent, streamingReasoningContent, checkIsAtBottom]);
 
   // 左侧分隔条拖拽
   useEffect(() => {
@@ -484,7 +439,6 @@ function App() {
     setIsLoading(true);
     isLoadingRef.current = true;
     isLockedAtBottom.current = true; // 在更新消息前设置锁定
-    setAutoScroll(true); // 确保自动滚动开启
     lastScrollTop.current = chatContainerRef.current?.scrollTop || 0; // 重置滚动位置
 
     setConversations(prev => prev.map(c => {
@@ -647,10 +601,14 @@ function App() {
     } finally {
       setIsLoading(false);
       isLoadingRef.current = false;
-      isLockedAtBottom.current = false; // 流式输出结束，取消锁定
-      // 流式输出结束后，重置 autoScroll，避免强制拉回底部
-      // 让滚动事件处理器根据用户当前位置来决定是否自动滚动
-      setAutoScroll(false);
+      // 流式输出完成后，强制滚动到底部
+      requestAnimationFrame(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      });
+      // 流式输出结束，取消锁定
+      isLockedAtBottom.current = false;
       setStreamingContent('');
       setStreamingReasoningContent('');
       setReasoningStartTime(0);
@@ -831,70 +789,6 @@ function App() {
     }
   }, [currentConversation]);
 
-  // 滚动到顶部
-  const scrollToTop = useCallback(() => {
-    if (chatContainerRef.current) {
-      isScrollingByNav.current = true;
-      // 滚动到顶部时，取消底部锁定
-      isLockedAtBottom.current = false;
-      chatContainerRef.current.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-
-      // 监听滚动完成，避免图标快速切换
-      const checkScrollEnd = () => {
-        if (chatContainerRef.current) {
-          if (chatContainerRef.current.scrollTop <= 1) {
-            // 已经滚动到顶部
-            isScrollingByNav.current = false;
-            setScrollNavDirection('down');
-          } else {
-            // 还在滚动中，继续检查
-            requestAnimationFrame(checkScrollEnd);
-          }
-        }
-      };
-
-      // 开始检查滚动状态
-      requestAnimationFrame(checkScrollEnd);
-    }
-  }, []);
-
-  // 滚动到底部
-  const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current) {
-      isScrollingByNav.current = true;
-      // 滚动到底部时，锁定在底部
-      isLockedAtBottom.current = true;
-      const scrollHeight = chatContainerRef.current.scrollHeight;
-      chatContainerRef.current.scrollTo({
-        top: scrollHeight,
-        behavior: 'smooth'
-      });
-      setAutoScroll(true);
-
-      // 监听滚动完成，避免图标快速切换
-      const checkScrollEnd = () => {
-        if (chatContainerRef.current) {
-          const {scrollTop, scrollHeight, clientHeight} = chatContainerRef.current;
-          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-          if (distanceToBottom <= 1) {
-            // 已经滚动到底部
-            isScrollingByNav.current = false;
-            setScrollNavDirection('up');
-          } else {
-            // 还在滚动中，继续检查
-            requestAnimationFrame(checkScrollEnd);
-          }
-        }
-      };
-
-      // 开始检查滚动状态
-      requestAnimationFrame(checkScrollEnd);
-    }
-  }, []);
-
   // 主题切换
   const handleToggleTheme = useCallback(() => {
     setIsDark(prev => {
@@ -1031,15 +925,20 @@ function App() {
               </div>
             )}
 
-            {/* 滚动导航按钮 */}
-            {scrollNavDirection && currentConversation && (
+            {/* 滚动到底部按钮 */}
+            {showScrollBottomButton && currentConversation && (
               <div className="absolute right-4 bottom-36">
                 <button
-                  onClick={scrollNavDirection === 'up' ? scrollToTop : scrollToBottom}
+                  onClick={() => {
+                    scrollEventBus.next({
+                      method: 'clickButtonToScrollToBottom',
+                      args: null
+                    });
+                  }}
                   className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-400 hover:bg-gray-500'} text-white dark:text-white light:text-gray-900 p-2 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 sm:p-2.5`}
-                  title={scrollNavDirection === 'up' ? '回到顶部' : '到底部'}
+                  title="滚动到底部"
                 >
-                  {scrollNavDirection === 'up' ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                  <ChevronDown size={20}/>
                 </button>
               </div>
             )}
