@@ -443,14 +443,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   onClick={() => onModelChange('glm')}
                 >
                   <span className="font-medium">GLM</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-4.7</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
                   onClick={() => onModelChange('gpt')}
                 >
                   <span className="font-medium">GPT</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-4o</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
