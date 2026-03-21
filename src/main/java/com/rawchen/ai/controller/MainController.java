@@ -152,6 +152,10 @@ public class MainController {
                 baseUrl = Constants.GPT_BASE_URL;
                 apiKey = Constants.GPT_API_KEY;
                 modelName = Constants.GPT_MODEL;
+            } else if ("claude".equals(model)) {
+                baseUrl = Constants.CLAUDE_BASE_URL;
+                apiKey = Constants.CLAUDE_API_KEY;
+                modelName = Constants.CLAUDE_MODEL;
             } else {
                 return ResponseEntity.badRequest().build();
             }

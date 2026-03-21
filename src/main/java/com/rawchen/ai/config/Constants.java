@@ -24,4 +24,8 @@ public class Constants {
     public final static String GPT_API_KEY = "sk-xxx";
     public final static String GPT_BASE_URL = "https://api.openai-hub.com/v1";
     public static final String GPT_MODEL = "gpt-5.4";
+
+    public final static String CLAUDE_API_KEY = "sk-xxx";
+    public final static String CLAUDE_BASE_URL = "https://cdn.openai-hub.com/v1";
+    public static final String CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 }

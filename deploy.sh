@@ -1,10 +1,11 @@
 # 打包前端项目
 cd front
-npm i
-npm run build:prod
+pnpm i
+pnpm run build:prod
 
-rm -rf ../src/main/resources/static/*
-cp -r dist/* ../src/main/resources/static/
+mkdir -p ../src/main/resources/static && \
+rm -rf ../src/main/resources/static/* && \
+cp -r dist/. ../src/main/resources/static/
 
 cd ..
 chmod +x remote_deploy.sh

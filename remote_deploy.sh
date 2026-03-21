@@ -36,7 +36,7 @@ ssh -i id_rsa.pem -p 22 root@${SERVER_IP} << EOF
 
 cd ${DEPLOY_PATH};
 
-ps -ef | grep ${PROJECT_NAME}.jar | grep -v 'grep' | cut -c 9-15 | xargs kill -s 9
+pkill -9 -f ${JAR_NAME}.jar || true
 
 echo '---------------开始启动项目---------------'
 
