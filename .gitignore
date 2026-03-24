@@ -6,8 +6,11 @@ target/
 ### IntelliJ IDEA ###
 .idea
 *.iws
-*.iml
+#*.iml
 *.ipr
+
+/log/
+/src/main/resources/static
 
 ### Eclipse ###
 .apt_generated
