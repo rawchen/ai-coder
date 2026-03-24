@@ -890,7 +890,7 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧边栏 - 对话列表 */}
         <div
-          className={`${leftPanelOpen ? 'w-64' : 'w-0'} overflow-hidden flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+          className={`${leftPanelOpen ? 'w-[264px]' : 'w-0'} overflow-hidden flex flex-col flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
           style={{width: leftPanelOpen ? `${leftWidth}px` : '0px'}}
         >
           <ConversationList

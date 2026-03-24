@@ -1,5 +1,5 @@
 import { Conversation } from '../types';
-import { MessageSquare, Plus, Trash2, Search, X, Loader2, Keyboard } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Search, X, Loader2, Command } from 'lucide-react';
 import { formatDate } from '../services/storage';
 import { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -158,8 +158,8 @@ export function ConversationList({
             <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
               isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
             }`}>
-              <Keyboard size={10}/>
-              <span className="font-medium">⌘F</span>
+              <Command size={12}/>
+              <span className="font-medium">F</span>
             </div>
           )}
           {searchQuery && (
@@ -199,7 +199,7 @@ export function ConversationList({
               return (
                 <div
                   key={conv.id}
-                  className={`group flex items-center gap-3 px-3 py-2 mx-2 rounded-lg cursor-pointer transition-colors select-none border ${
+                  className={`group flex items-center pl-3 pr-2 mr-2 py-2 mx-2 rounded-lg cursor-pointer transition-colors select-none border ${
                     currentId === conv.id
                       ? 'border-blue-500/30 bg-blue-500/20'
                       : `border-transparent ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50'}`
@@ -208,7 +208,7 @@ export function ConversationList({
                 >
                   <MessageSquare size={16} className={`${isDark ? 'text-gray-400' : 'text-gray-500'} flex-shrink-0`}/>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pl-2">
                     <div className={`text-sm truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
                       {matchCount > 0 && searchQuery ? (
                         <span className={`text-xs px-1.5 py-0.5 rounded mr-2 ${isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
