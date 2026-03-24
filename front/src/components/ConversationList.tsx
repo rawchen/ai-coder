@@ -1,7 +1,7 @@
 import { Conversation } from '../types';
-import { MessageSquare, Plus, Trash2, Search, X } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Search, X, Loader2 } from 'lucide-react';
 import { formatDate } from '../services/storage';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -21,7 +21,10 @@ export function ConversationList({
   isDark
 }: ConversationListProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayedCount, setDisplayedCount] = useState(20);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const LOAD_MORE_THRESHOLD = 200; // 距离底部多少像素时触发加载
 
   // 搜索过滤对话
   const filteredConversations = conversations.filter(conv => {
@@ -37,6 +40,49 @@ export function ConversationList({
 
     return false;
   });
+
+  // 当前显示的对话
+  const displayedConversations = filteredConversations.slice(0, displayedCount);
+  const hasMore = filteredConversations.length > displayedCount;
+
+  // 加载更多对话
+  const loadMore = useCallback(() => {
+    if (isLoading || !hasMore) return;
+    setIsLoading(true);
+    // 模拟异步加载，避免频繁触发
+    setTimeout(() => {
+      setDisplayedCount(prev => Math.min(prev + 20, filteredConversations.length));
+      setIsLoading(false);
+    }, 100);
+  }, [isLoading, hasMore, filteredConversations.length]);
+
+  // 处理滚动事件
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || isLoading || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+    // 当距离底部小于阈值时加载更多
+    if (distanceToBottom < LOAD_MORE_THRESHOLD) {
+      loadMore();
+    }
+  }, [isLoading, hasMore, loadMore]);
+
+  // 监听搜索变化，重置显示数量
+  useEffect(() => {
+    setDisplayedCount(20);
+  }, [searchQuery]);
+
+  // 添加滚动监听
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   // 计算匹配的消息数量
   const getMatchCount = (conv: Conversation): number => {
@@ -104,7 +150,7 @@ export function ConversationList({
         </div>
         {searchQuery && (
           <div className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            找到 {filteredConversations.length} 个对话
+            找到 {filteredConversations.length} 个对话 {displayedCount < filteredConversations.length && `(显示 ${displayedCount})`}
           </div>
         )}
       </div>
@@ -123,7 +169,7 @@ export function ConversationList({
           </div>
         ) : (
           <div className="py-2">
-            {filteredConversations.map(conv => {
+            {displayedConversations.map(conv => {
               const matchCount = getMatchCount(conv);
               return (
                 <div
@@ -166,6 +212,22 @@ export function ConversationList({
                 </div>
               );
             })}
+
+            {/* 加载更多指示器 */}
+            {hasMore && (
+              <div className="p-4 flex items-center justify-center">
+                {isLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={16} className="animate-spin"/>
+                    <span>加载中...</span>
+                  </div>
+                ) : (
+                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    已显示 {displayedCount}/{filteredConversations.length} 个对话，继续滚动加载更多
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
