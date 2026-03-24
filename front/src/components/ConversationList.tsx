@@ -1,7 +1,7 @@
 import { Conversation } from '../types';
 import { MessageSquare, Plus, Trash2, Search, X } from 'lucide-react';
 import { formatDate } from '../services/storage';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -21,6 +21,7 @@ export function ConversationList({
   isDark
 }: ConversationListProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 搜索过滤对话
   const filteredConversations = conversations.filter(conv => {
@@ -44,12 +45,27 @@ export function ConversationList({
     return conv.messages.filter(msg => msg.content.toLowerCase().includes(query)).length;
   };
 
+  // 处理新建对话
+  const handleNewConversation = () => {
+    if (searchQuery) {
+      setSearchQuery('');
+    }
+    onNew();
+
+    // 滚动到顶部
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
+    }, 0);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* 新建对话按钮 */}
       <div className={`p-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <button
-          onClick={onNew}
+          onClick={handleNewConversation}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
         >
           <Plus size={18}/>
@@ -94,7 +110,7 @@ export function ConversationList({
       </div>
 
       {/* 对话列表 */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {filteredConversations.length === 0 ? (
           <div className={`p-4 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             <MessageSquare size={40} className="mx-auto mb-2 opacity-50"/>

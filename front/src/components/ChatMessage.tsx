@@ -1,6 +1,6 @@
-import { Message, CodeBlock } from '../types';
+import { CodeBlock, Message } from '../types';
 import { CodeBlockView } from './CodeBlockView';
-import { User, Bot } from 'lucide-react';
+import { Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -13,12 +13,18 @@ interface ChatMessageProps {
   isDark: boolean;
 }
 
-export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMessageProps) {
+export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   // 解析消息中的代码块（包括未完成的代码块）
   const parseContent = (content: string) => {
-    const parts: { type: 'text' | 'code'; content: string; language?: string; filename?: string; incomplete?: boolean }[] = [];
+    const parts: {
+      type: 'text' | 'code';
+      content: string;
+      language?: string;
+      filename?: string;
+      incomplete?: boolean
+    }[] = [];
     let lastIndex = 0;
 
     // 匹配完整的代码块
@@ -28,7 +34,7 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
     while ((match = codeBlockRegex.exec(content)) !== null) {
       // 添加代码块之前的文本
       if (match.index > lastIndex) {
-        parts.push({ type: 'text', content: content.slice(lastIndex, match.index) });
+        parts.push({type: 'text', content: content.slice(lastIndex, match.index)});
       }
 
       // 添加完整的代码块
@@ -54,7 +60,7 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
         // 添加代码块前的文本（如果有）
         const beforeCode = remaining.slice(0, incompleteCodeMatch.index);
         if (beforeCode) {
-          parts.push({ type: 'text', content: beforeCode });
+          parts.push({type: 'text', content: beforeCode});
         }
 
         // 添加未完成的代码块
@@ -67,27 +73,38 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
         });
       } else {
         // 纯文本
-        parts.push({ type: 'text', content: remaining });
+        parts.push({type: 'text', content: remaining});
       }
     }
 
-    return parts.length > 0 ? parts : [{ type: 'text' as const, content }];
+    return parts.length > 0 ? parts : [{type: 'text' as const, content}];
   };
 
   const contentParts = parseContent(message.content);
 
   return (
-    <div className={`flex gap-4 p-4 ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
+    <div
+      className={`flex gap-4 p-4 ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
       {/* 头像 */}
-      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-600 to-pink-500'}`}>
-        {isUser ? <User size={18} className="text-white" /> : <Bot size={18} className="text-white" />}
+      <div
+        className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-600 to-pink-500'}`}>
+        {isUser ? <User size={18} className="text-white"/> : <Bot size={18} className="text-white"/>}
       </div>
 
       {/* 消息内容 */}
       <div className="flex-1 overflow-hidden">
         <div className={`text-xs mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
           {isUser ? '你' : 'AI 助手'}
-          <span className="ml-2">{new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="ml-2">{new Date(message.timestamp).toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</span>
+          {!isUser && message.model && (
+            <span
+              className={`ml-2 px-2 rounded-full text-xs ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+              {message.model === 'deepseek' ? 'DeepSeek' : message.model === 'kimi' ? 'Kimi' : message.model === 'glm' ? 'GLM' : message.model === 'claude' ? 'Claude' : 'GPT'}
+            </span>
+          )}
         </div>
 
         <div className={`space-y-3 overflow-visible ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -98,8 +115,11 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
             /* 思考内容 - 仅对助手消息且存在思考内容时显示 */
             <>
               {!isUser && message.reasoning_content && (
-                <details className={`border rounded-lg overflow-hidden ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-300 bg-gray-100/50'}`} open={true}>
-                  <summary className={`px-4 py-2 cursor-pointer transition-colors text-sm select-none ${isDark ? 'text-gray-400 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-200/50'}`}>
+                <details
+                  className={`border rounded-lg overflow-hidden ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-300 bg-gray-100/50'}`}
+                  open={true}>
+                  <summary
+                    className={`px-4 py-2 cursor-pointer transition-colors text-sm select-none ${isDark ? 'text-gray-400 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-200/50'}`}>
                     {message.thinking_time === 0 ? '思考中...' : `已思考（用时 ${message.thinking_time} 秒）`}
                   </summary>
                   <div className={`px-4 py-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
@@ -108,10 +128,13 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeKatex]}
                         components={{
-                          p: ({ children }) => <p className={isDark ? 'text-gray-400 my-1' : 'text-gray-600 my-1'}>{children}</p>,
-                          ul: ({ children }) => <ul className={`list-disc ml-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</ul>,
-                          ol: ({ children }) => <ol className={`list-decimal ml-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</ol>,
-                          li: ({ children }) => <li className="">{children}</li>,
+                          p: ({children}) => <p
+                            className={isDark ? 'text-gray-400 my-1' : 'text-gray-600 my-1'}>{children}</p>,
+                          ul: ({children}) => <ul
+                            className={`list-disc ml-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</ul>,
+                          ol: ({children}) => <ol
+                            className={`list-decimal ml-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{children}</ol>,
+                          li: ({children}) => <li className="">{children}</li>,
                         }}
                       >{message.reasoning_content}</ReactMarkdown>
                     </div>
@@ -142,20 +165,26 @@ export function ChatMessage({ message, onApplyCode, onCopyCode, isDark }: ChatMe
                       remarkPlugins={[remarkGfm, remarkMath]}  // 合并 remark 插件
                       rehypePlugins={[rehypeKatex]}            // rehype 插件
                       components={{
-                        ul: ({ children }) => <ul className="list-disc">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal">{children}</ol>,
-                        li: ({ children }) => <li className="my-0">{children}</li>,
-                        p: ({ children }) => <p className="my-1">{children}</p>,
-                        table: ({ children }) => (
+                        ul: ({children}) => <ul className="list-disc">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal">{children}</ol>,
+                        li: ({children}) => <li className="my-0">{children}</li>,
+                        p: ({children}) => <p className="my-1">{children}</p>,
+                        table: ({children}) => (
                           <div className="overflow-x-auto my-4">
-                            <table className={`min-w-full border-collapse border ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>{children}</table>
+                            <table
+                              className={`min-w-full border-collapse border ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>{children}</table>
                           </div>
                         ),
-                        thead: ({ children }) => <thead style={{ backgroundColor: isDark ? '#2a3445' : '#f3f4f6' }}>{children}</thead>,
-                        tbody: ({ children }) => <tbody>{children}</tbody>,
-                        tr: ({ children }) => <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>{children}</tr>,
-                        th: ({ children }) => <th className={`px-4 py-2 text-left border-r last:border-r-0 ${isDark ? 'text-gray-200 border-gray-700' : 'text-gray-800 border-gray-300'}`}>{children}</th>,
-                        td: ({ children }) => <td className={`px-4 py-2 border-r last:border-r-0 ${isDark ? 'text-gray-300 border-gray-700' : 'text-gray-700 border-gray-300'}`} style={{ backgroundColor: isDark ? '#49546326' : '#f3f4f640' }}>{children}</td>,
+                        thead: ({children}) => <thead
+                          style={{backgroundColor: isDark ? '#2a3445' : '#f3f4f6'}}>{children}</thead>,
+                        tbody: ({children}) => <tbody>{children}</tbody>,
+                        tr: ({children}) => <tr
+                          className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>{children}</tr>,
+                        th: ({children}) => <th
+                          className={`px-4 py-2 text-left border-r last:border-r-0 ${isDark ? 'text-gray-200 border-gray-700' : 'text-gray-800 border-gray-300'}`}>{children}</th>,
+                        td: ({children}) => <td
+                          className={`px-4 py-2 border-r last:border-r-0 ${isDark ? 'text-gray-300 border-gray-700' : 'text-gray-700 border-gray-300'}`}
+                          style={{backgroundColor: isDark ? '#49546326' : '#f3f4f640'}}>{children}</td>,
                       }}
                     >{part.content}</ReactMarkdown>
                   </div>

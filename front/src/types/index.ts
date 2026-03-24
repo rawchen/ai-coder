@@ -7,6 +7,7 @@ export interface Message {
   codeBlocks?: CodeBlock[];
   reasoning_content?: string;
   thinking_time?: number;
+  model?: ModelType; // 用于显示使用的模型（仅新消息）
 }
 
 // 代码块类型

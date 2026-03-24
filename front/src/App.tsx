@@ -150,9 +150,12 @@ function App() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
   const { showScrollBottomButton, setShowScrollBottomButton } = useScrollStore();
+  const [draftConversation, setDraftConversation] = useState<Conversation | null>(null);
 
   // 获取当前对话
-  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const currentConversation = draftConversation?.id === currentConversationId
+    ? (conversations.find(c => c.id === currentConversationId) || draftConversation)
+    : conversations.find(c => c.id === currentConversationId);
 
   // 检查是否在底部的函数（距离底部300px认为在底部）
   const checkIsAtBottom = useCallback(() => {
@@ -253,6 +256,11 @@ function App() {
   // 当切换会话时加载对应的文件
   useEffect(() => {
     if (currentConversation) {
+      // 如果切换到的不是草稿对话，清空草稿
+      if (draftConversation && draftConversation.id !== currentConversationId) {
+        setDraftConversation(null);
+      }
+
       setProjectFiles(currentConversation.projectFiles || []);
       setSelectedFile(null);
       // 保存当前会话ID
@@ -272,11 +280,12 @@ function App() {
         justSwitchedConversation.current = false;
       }, 100);
     }
-  }, [currentConversationId, scrollToBottom]);
+  }, [currentConversationId, scrollToBottom, draftConversation]);
 
   // 保存当前会话的文件到本地存储
   useEffect(() => {
-    if (currentConversationId && conversations.length > 0) {
+    // 只有当前对话不是草稿时，才更新 conversations
+    if (currentConversationId && conversations.length > 0 && (!draftConversation || draftConversation.id !== currentConversationId)) {
       setConversations(prev => prev.map(c => {
         if (c.id === currentConversationId) {
           return {...c, projectFiles};
@@ -284,7 +293,7 @@ function App() {
         return c;
       }));
     }
-  }, [projectFiles, currentConversationId]);
+  }, [projectFiles, currentConversationId, draftConversation, conversations.length]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -367,10 +376,9 @@ function App() {
 
   // 创建新对话
   const createNewConversation = useCallback(() => {
-    // 检查是否已存在空的对话
-    const existingEmptyConv = conversations.find(c => c.messages.length === 0 && c.title === '新对话');
-    if (existingEmptyConv) {
-      setCurrentConversationId(existingEmptyConv.id);
+    // 检查是否已存在空的草稿对话
+    if (draftConversation) {
+      setCurrentConversationId(draftConversation.id);
       // 聚焦输入框
       setTimeout(() => chatInputRef.current?.focus(), 0);
       return;
@@ -385,11 +393,11 @@ function App() {
       updatedAt: new Date(),
       projectFiles: []
     };
-    setConversations(prev => [newConversation, ...prev]);
+    setDraftConversation(newConversation);
     setCurrentConversationId(newConversation.id);
     // 聚焦输入框
     setTimeout(() => chatInputRef.current?.focus(), 0);
-  }, [conversations, model]);
+  }, [draftConversation, model]);
 
   // 删除对话
   const deleteConversation = useCallback((id: string) => {
@@ -414,6 +422,9 @@ function App() {
 
     // 确保有当前对话
     let convId = currentConversationId;
+    let isDraft = false;
+    let existingMessages: Message[] = [];
+
     if (!convId) {
       const newConv: Conversation = {
         id: generateId(),
@@ -426,6 +437,19 @@ function App() {
       setConversations(prev => [newConv, ...prev]);
       convId = newConv.id;
       setCurrentConversationId(convId);
+    } else if (draftConversation && draftConversation.id === convId) {
+      isDraft = true;
+      existingMessages = draftConversation.messages;
+      // 如果是草稿对话，添加到 conversations
+      const convToAdd: Conversation = {
+        ...draftConversation,
+        title: messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : ''),
+        updatedAt: new Date()
+      };
+      setConversations(prev => [convToAdd, ...prev]);
+    } else {
+      const conv = conversations.find(c => c.id === convId);
+      existingMessages = conv?.messages || [];
     }
 
     // 添加用户消息
@@ -441,6 +465,7 @@ function App() {
     isLockedAtBottom.current = true; // 在更新消息前设置锁定
     lastScrollTop.current = chatContainerRef.current?.scrollTop || 0; // 重置滚动位置
 
+    // 添加用户消息到 conversations
     setConversations(prev => prev.map(c => {
       if (c.id === convId) {
         return {
@@ -456,9 +481,8 @@ function App() {
     setStreamingContent('');
 
     // 构建消息历史
-    const conv = conversations.find(c => c.id === convId);
     const messageHistory = [
-      ...(conv?.messages || []).map(m => ({
+      ...existingMessages.map(m => ({
         role: m.role,
         content: m.content
       })),
@@ -558,12 +582,14 @@ function App() {
           timestamp: new Date(),
           reasoning_content: response.reasoning_content,
           thinking_time: response.thinking_time,
+          model: model,
           codeBlocks: codeBlocks.map((block, index) => ({
             id: `${generateId()}-${index}`,
             ...block
           }))
         };
 
+        // 添加助手消息到 conversations
         setConversations(prev => prev.map(c => {
           if (c.id === convId) {
             return {
@@ -580,9 +606,11 @@ function App() {
           id: generateId(),
           role: 'assistant',
           content: `抱歉，生成失败: ${response.error || '未知错误'}`,
-          timestamp: new Date()
+          timestamp: new Date(),
+          model: model
         };
 
+        // 添加错误消息到 conversations
         setConversations(prev => prev.map(c => {
           if (c.id === convId) {
             return {
@@ -619,8 +647,12 @@ function App() {
       }, 3000);
       // 清空暂存文件
       setStagedFiles([]);
+      // 如果是草稿对话，清空草稿
+      if (isDraft) {
+        setDraftConversation(null);
+      }
     }
-  }, [currentConversationId, conversations, model, projectFiles, stagedFiles, styleOptions, responseMode, streamMode, simpleQAMode]);
+  }, [currentConversationId, conversations, draftConversation, model, projectFiles, stagedFiles, styleOptions, responseMode, streamMode, simpleQAMode]);
 
   // 处理文件上传 - 暂存文件
   const handleFileUpload = useCallback(async (files: FileList) => {
