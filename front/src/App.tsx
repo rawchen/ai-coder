@@ -13,7 +13,7 @@ import {
   StreamMode,
   StyleOptions
 } from './types';
-import { callAI, detectLanguage, extractCodeBlocks } from './services/api';
+import { callAI, detectLanguage, extractCodeBlocks, generateConversationTitle } from './services/api';
 import {
   addFileHistory,
   generateId,
@@ -151,6 +151,7 @@ function App() {
   const chatInputRef = useRef<ChatInputRef>(null);
   const { showScrollBottomButton, setShowScrollBottomButton } = useScrollStore();
   const [draftConversation, setDraftConversation] = useState<Conversation | null>(null);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
 
   // 获取当前对话
   const currentConversation = draftConversation?.id === currentConversationId
@@ -424,6 +425,8 @@ function App() {
     let convId = currentConversationId;
     let isDraft = false;
     let existingMessages: Message[] = [];
+    let titleGenerationTriggered = false; // 标记是否已触发标题生成
+    let aiStreamedContent = ''; // 用于追踪AI流式输出的内容
 
     if (!convId) {
       const newConv: Conversation = {
@@ -529,6 +532,26 @@ function App() {
       const useStream = streamMode === 'stream';
       const streamCallback = useStream ? (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
+        aiStreamedContent += chunk;
+        
+        // 在AI流式输出达到200-300字符时触发标题生成（仅对新对话）
+        if (!titleGenerationTriggered && existingMessages.length === 0 && aiStreamedContent.length >= 200 && aiStreamedContent.length <= 300) {
+          titleGenerationTriggered = true;
+          const conversationText = `用户: ${messageContent}\n\nAI: ${aiStreamedContent}`;
+          
+          generateConversationTitle(conversationText)
+            .then(title => {
+              setConversations(prev => prev.map(c => {
+                if (c.id === convId) {
+                  return {...c, title};
+                }
+                return c;
+              }));
+            })
+            .catch(error => {
+              console.error('生成标题失败:', error);
+            });
+        }
       } : undefined;
 
       const reasoningStreamCallback = useStream ? (chunk: string) => {
@@ -572,34 +595,34 @@ function App() {
       setShowCompleteAnimation(true);
 
       if (response.success && response.content) {
-        // 提取代码块（仅在代码生成模式）
-        const codeBlocks = responseMode === 'code' ? extractCodeBlocks(response.content) : [];
+      // 提取代码块（仅在代码生成模式）
+      const codeBlocks = responseMode === 'code' ? extractCodeBlocks(response.content) : [];
 
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: response.content,
-          timestamp: new Date(),
-          reasoning_content: response.reasoning_content,
-          thinking_time: response.thinking_time,
-          model: model,
-          codeBlocks: codeBlocks.map((block, index) => ({
-            id: `${generateId()}-${index}`,
-            ...block
-          }))
-        };
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: response.content,
+        timestamp: new Date(),
+        reasoning_content: response.reasoning_content,
+        thinking_time: response.thinking_time,
+        model: model,
+        codeBlocks: codeBlocks.map((block, index) => ({
+          id: `${generateId()}-${index}`,
+          ...block
+        }))
+      };
 
-        // 添加助手消息到 conversations
-        setConversations(prev => prev.map(c => {
-          if (c.id === convId) {
-            return {
-              ...c,
-              messages: [...c.messages, assistantMessage],
-              updatedAt: new Date()
-            };
-          }
-          return c;
-        }));
+      // 添加助手消息到 conversations
+      setConversations(prev => prev.map(c => {
+        if (c.id === convId) {
+          return {
+            ...c,
+            messages: [...c.messages, assistantMessage],
+            updatedAt: new Date()
+          };
+        }
+        return c;
+      }));
       } else {
         // 错误消息
         const errorMessage: Message = {

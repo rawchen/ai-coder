@@ -29,7 +29,7 @@ export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMess
 
     // 匹配完整的代码块
     const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
-    let match;
+    let match: RegExpExecArray | null;
 
     while ((match = codeBlockRegex.exec(content)) !== null) {
       // 添加代码块之前的文本

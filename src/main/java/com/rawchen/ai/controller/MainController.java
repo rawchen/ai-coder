@@ -33,6 +33,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +119,140 @@ public class MainController {
             return R.fail("修改失败", null);
         } else {
             return R.ok();
+        }
+    }
+
+    /**
+     * AI 生成对话标题
+     */
+    @RequestMapping(value = "/ai/generateTitle")
+    public R<String> generateTitle(@RequestBody Map<String, Object> request) {
+        try {
+            String conversationContent = (String) request.get("conversation");
+            if (conversationContent == null || conversationContent.trim().isEmpty()) {
+                return R.fail("对话内容不能为空", null);
+            }
+
+            // 限制对话内容长度，避免token超限
+            String truncatedContent = conversationContent.length() > 2000
+                    ? conversationContent.substring(0, 2000) + "..."
+                    : conversationContent;
+
+            // 构建生成标题的提示词
+            String systemPrompt = "# 角色设定\n" +
+                    "你是专注于对话内容提炼的智能总结助手，隶属于高效信息处理服务体系，核心职责是从用户提供的对话文本中精准提取核心信息，生成简洁、直观的总结标题，帮助用户快速把握对话核心。\n" +
+                    "\n" +
+                    "# 执行准则\n" +
+                    "- **必做事项**：标题必须完全基于对话内容生成，不得添加对话外的信息；标题需包含对话的核心主体与关键事件，核心主题必须精简；标题长度严格控制在1-10字以内。\n" +
+                    "- **约束条件**：禁止使用模糊性词汇（如“交流”“讨论”等无实质内容的表述）；禁止遗漏对话中的关键人物或核心动作；禁止使用疑问句或感叹句作为标题。\n" +
+                    "\n" +
+                    "# 输入处理规则\n" +
+                    "- 优先读取对话中的高频关键词、核心动作与关键人物；\n" +
+                    "- 若对话存在多主题，以出现频率最高或逻辑优先级最高的主题为核心；\n" +
+                    "- 若对话内容为空或无有效信息，直接输出“对话内容无效”。\n" +
+                    "-若出现应该、如何这些疑问词，则带有建议。\n" +
+                    "\n" +
+                    "# 操作流程\n" +
+                    "1. **核心信息提取**：扫描对话文本，标记出关键人物（如“用户”“客服”）、核心动作（如“咨询”“投诉”“建议”）、关键事件（如“退款申请”“产品故障”）；\n" +
+                    "2. **主题整合**：将提取的关键信息按“人物+动作+事件”的逻辑进行组合，形成初步标题框架；\n" +
+                    "3. **精简优化**：删除冗余词汇，精简主语，调整语序，确保标题在1-10字且表意清晰；\n" +
+                    "4. **合规校验**：检查标题是否符合执行准则，若不符合则返回步骤1重新提取。\n" +
+                    "\n" +
+                    "# 输出规范\n" +
+                    "- 输出结构：仅输出总结标题，无需附加任何解释性内容；\n" +
+                    "- 语言风格：使用陈述性短句，简洁明了；\n" +
+                    "- 字数限制：严格控制在1-10字，越短越好；\n";
+
+            List<Map<String, String>> messages = new ArrayList<>();
+            Map<String, String> systemMsg = new HashMap<>();
+            systemMsg.put("role", "system");
+            systemMsg.put("content", systemPrompt);
+            messages.add(systemMsg);
+
+            Map<String, String> userMsg = new HashMap<>();
+            userMsg.put("role", "user");
+            userMsg.put("content", "请为以下对话生成一个标题：\n\n" + truncatedContent);
+            messages.add(userMsg);
+
+            URL url = new URL(Constants.DEEPSEEK_BASE_URL + "/chat/completions");
+            HttpURLConnection conn = null;
+            InputStream inputStream = null;
+
+            try {
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Authorization", "Bearer " + Constants.DEEPSEEK_API_KEY);
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("model", Constants.DEEPSEEK_CHAT_MODEL);
+                body.put("messages", messages);
+                body.put("stream", false);
+                body.put("temperature", 0.7);
+                body.put("max_tokens", 20);
+                String jsonBody = JSONUtil.toJsonStr(body);
+                log.info("标题生成请求体: {}", jsonBody);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = conn.getResponseCode();
+                log.info("标题生成响应码: {}", responseCode);
+
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    String error = IoUtil.read(conn.getErrorStream(), StandardCharsets.UTF_8);
+                    log.error("标题生成失败: {}", error);
+                    return R.fail("标题生成失败: " + error, null);
+                }
+
+                inputStream = conn.getInputStream();
+                String responseText = IoUtil.read(inputStream, StandardCharsets.UTF_8);
+                log.info("标题生成响应: {}", responseText);
+
+                // 解析响应
+                Map<String, Object> responseJson = JSONUtil.toBean(responseText, Map.class);
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseJson.get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    Map<String, String> message = (Map<String, String>) choice.get("message");
+                    String title = message != null ? message.get("content") : null;
+
+                    if (title != null) {
+                        // 清理标题，移除可能的标点符号和多余空格
+                        title = title.trim().replaceAll("[，。！？、；：,.!?;:]", "");
+                        // 限制标题长度
+                        if (title.length() > 15) {
+                            title = title.substring(0, 15);
+                        }
+                        log.info("生成的标题: {}", title);
+                        return R.ok(title);
+                    }
+                }
+
+                return R.fail("标题生成失败: 响应格式错误", null);
+
+            } catch (Exception e) {
+                log.error("标题生成请求处理失败", e);
+                return R.fail("标题生成失败: " + e.getMessage(), null);
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        log.error("关闭输入流失败", e);
+                    }
+                }
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        } catch (Exception e) {
+            log.error("标题生成初始化失败", e);
+            return R.fail("标题生成初始化失败: " + e.getMessage(), null);
         }
     }
 

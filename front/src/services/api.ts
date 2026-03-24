@@ -332,3 +332,53 @@ export function detectLanguage(code: string): string {
 
   return 'plaintext';
 }
+
+// 生成对话标题
+export async function generateConversationTitle(conversationContent: string): Promise<string> {
+  // console.log('generateConversationTitle 请求参数:', conversationContent);
+
+  // 如果对话内容为空，返回默认标题
+  if (!conversationContent.trim()) {
+    return '新对话';
+  }
+
+  // 限制对话内容长度
+  const truncatedContent = conversationContent.length > 2000
+    ? conversationContent.slice(0, 2000) + '...'
+    : conversationContent;
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/ai/generateTitle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        conversation: truncatedContent
+      })
+    });
+
+    console.log('generateConversationTitle 响应状态:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('generateConversationTitle 响应失败:', error);
+      // 如果请求失败，返回简单的截断标题
+      return conversationContent.slice(0, 15) + (conversationContent.length > 15 ? '...' : '');
+    }
+
+    const data = await response.json();
+    const title = data.data || data.result || '';
+
+    // 确保标题不为空
+    if (!title.trim()) {
+      return conversationContent.slice(0, 15) + (conversationContent.length > 15 ? '...' : '');
+    }
+
+    return title;
+  } catch (error) {
+    console.error('generateConversationTitle 请求失败:', error);
+    // 如果请求失败，返回简单的截断标题
+    return conversationContent.slice(0, 15) + (conversationContent.length > 15 ? '...' : '');
+  }
+}
