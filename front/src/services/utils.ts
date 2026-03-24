@@ -1,5 +1,5 @@
-import { DiffResult, DiffChange } from '../types';
-import { diffLines, Change } from 'diff';
+import { DiffChange, DiffResult } from '../types';
+import { Change, diffLines } from 'diff';
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
@@ -18,13 +18,13 @@ export function calculateDiff(oldContent: string, newContent: string, filename: 
 
     lines.forEach(line => {
       if (change.added) {
-        diffChanges.push({ type: 'add', lineNumber, content: line });
+        diffChanges.push({type: 'add', lineNumber, content: line});
         additions++;
       } else if (change.removed) {
-        diffChanges.push({ type: 'remove', lineNumber, content: line });
+        diffChanges.push({type: 'remove', lineNumber, content: line});
         deletions++;
       } else {
-        diffChanges.push({ type: 'unchanged', lineNumber, content: line });
+        diffChanges.push({type: 'unchanged', lineNumber, content: line});
       }
       lineNumber++;
     });
@@ -72,7 +72,7 @@ Generated at: ${new Date().toLocaleString()}
     const blob = await zip.generateAsync({
       type: 'blob',
       compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
+      compressionOptions: {level: 6}
     });
 
     // 下载文件
@@ -151,8 +151,8 @@ export function exportAsPdf(
 
       // 普通文本
       const isCodeLine = line.startsWith('//') || line.startsWith('#') ||
-                         line.startsWith('import ') || line.startsWith('export ') ||
-                         line.match(/^[a-zA-Z_$][\w$]*\s*=/);
+        line.startsWith('import ') || line.startsWith('export ') ||
+        line.match(/^[a-zA-Z_$][\w$]*\s*=/);
 
       if (isCodeLine) {
         doc.setFont('courier', 'normal');
@@ -186,7 +186,7 @@ export function exportAsPdf(
         `第 ${i} 页 / 共 ${pageCount} 页`,
         pageWidth / 2,
         pageHeight - 10,
-        { align: 'center' }
+        {align: 'center'}
       );
     }
 
@@ -274,65 +274,4 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     document.body.removeChild(textarea);
     return success;
   }
-}
-
-// 格式化代码（简单格式化）
-export function formatCode(code: string, language: string): string {
-  // 根据语言进行基本格式化
-  const lines = code.split('\n');
-  let indentLevel = 0;
-  const indentChar = '  ';
-
-  const formatted = lines.map(line => {
-    const trimmed = line.trim();
-
-    // 减少缩进的字符
-    if (/^[}\])]/.test(trimmed)) {
-      indentLevel = Math.max(0, indentLevel - 1);
-    }
-
-    const result = indentChar.repeat(indentLevel) + trimmed;
-
-    // 增加缩进的字符
-    if (/[{(\[]$/.test(trimmed) && !trimmed.includes('//')) {
-      indentLevel++;
-    }
-
-    return result;
-  });
-
-  return formatted.join('\n');
-}
-
-// 生成代码高亮 HTML
-export function generateHighlightedHtml(code: string, language: string): string {
-  // 简单的语法高亮
-  const keywords: { [key: string]: string[] } = {
-    javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'import', 'export', 'default', 'async', 'await', 'try', 'catch'],
-    typescript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'import', 'export', 'default', 'async', 'await', 'try', 'catch', 'interface', 'type', 'enum'],
-    python: ['def', 'class', 'import', 'from', 'return', 'if', 'else', 'elif', 'for', 'while', 'try', 'except', 'with', 'as', 'lambda', 'True', 'False', 'None'],
-  };
-
-  let highlighted = code
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  // 高亮字符串
-  highlighted = highlighted.replace(/(["'`])(?:(?!\1)[^\\]|\\.)*\1/g, '<span class="text-green-400">$&</span>');
-
-  // 高亮注释
-  highlighted = highlighted.replace(/(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm, '<span class="text-gray-500">$&</span>');
-
-  // 高亮关键字
-  const langKeywords = keywords[language] || keywords.javascript;
-  langKeywords.forEach(kw => {
-    const regex = new RegExp(`\\b(${kw})\\b`, 'g');
-    highlighted = highlighted.replace(regex, '<span class="text-purple-400">$1</span>');
-  });
-
-  // 高亮数字
-  highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>');
-
-  return highlighted;
 }

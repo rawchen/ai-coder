@@ -69,15 +69,30 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
     const savedConversations = loadConversations();
     const savedCurrentId = loadCurrentConversationId();
+    const DISPLAY_COUNT = 20; // 瀑布流默认显示数量
 
     if (savedConversations.length > 0) {
       let targetId = savedCurrentId;
+
       // 如果保存的ID不存在于当前会话列表中，则使用第一个会话
       if (targetId && !savedConversations.find(c => c.id === targetId)) {
         targetId = savedConversations[0].id;
+      } else if (targetId) {
+        // 检查ID是否在前20个会话中（瀑布流显示范围）
+        const first20Ids = savedConversations.slice(0, DISPLAY_COUNT).map(c => c.id);
+        if (!first20Ids.includes(targetId)) {
+          // 如果不在前20个，使用第一个会话
+          targetId = savedConversations[0].id;
+        }
       } else if (!targetId) {
         targetId = savedConversations[0].id;
       }
+
+      // 如果最终的targetId与保存的不同，更新localStorage
+      if (targetId !== savedCurrentId) {
+        saveCurrentConversationId(targetId);
+      }
+
       return targetId;
     }
     return null;

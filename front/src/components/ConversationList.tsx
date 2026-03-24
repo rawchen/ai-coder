@@ -1,5 +1,5 @@
 import { Conversation } from '../types';
-import { MessageSquare, Plus, Trash2, Search, X, Loader2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Search, X, Loader2, Keyboard } from 'lucide-react';
 import { formatDate } from '../services/storage';
 import { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -24,6 +24,7 @@ export function ConversationList({
   const [displayedCount, setDisplayedCount] = useState(20);
   const [isLoading, setIsLoading] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const LOAD_MORE_THRESHOLD = 200; // 距离底部多少像素时触发加载
 
   // 搜索过滤对话
@@ -84,6 +85,20 @@ export function ConversationList({
     return () => container.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
+  // 快捷键监听 (Ctrl+F 或 Command+F)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+F 或 Command+F
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // 计算匹配的消息数量
   const getMatchCount = (conv: Conversation): number => {
     if (!searchQuery.trim()) return 0;
@@ -127,16 +142,26 @@ export function ConversationList({
             className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
           />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="搜索对话或消息..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-9 pr-9 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full pl-9 pr-20 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               isDark
                 ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
             }`}
           />
+          {/* 快捷键提示 */}
+          {!searchQuery && (
+            <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
+              isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
+            }`}>
+              <Keyboard size={10}/>
+              <span className="font-medium">⌘F</span>
+            </div>
+          )}
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
