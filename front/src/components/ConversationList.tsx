@@ -85,19 +85,24 @@ export function ConversationList({
     return () => container.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  // 快捷键监听 (Ctrl+F 或 Command+F)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+F 或 Command+F
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+  // 快捷键处理函数
+  const handleShortcutKey = useCallback((e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    }
   }, []);
+
+  // 快捷键监听 (Ctrl+F 或 Command+F) - 仅在搜索框无文本时绑定
+  useEffect(() => {
+    // 如果搜索框有文本，不绑定监听，让系统查找正常工作
+    if (searchQuery) {
+      return;
+    }
+
+    document.addEventListener('keydown', handleShortcutKey);
+    return () => document.removeEventListener('keydown', handleShortcutKey);
+  }, [handleShortcutKey, searchQuery]);
 
   // 计算匹配的消息数量
   const getMatchCount = (conv: Conversation): number => {
