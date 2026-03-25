@@ -66,13 +66,13 @@ public class MainController {
                     "# 操作流程\n" +
                     "1. **核心信息提取**：扫描对话文本，标记出关键主语、核心动作（如“咨询”“投诉”“建议”）、关键事件（如“申请”“产品”）；\n" +
                     "2. **主题整合**：将提取的关键信息按“主语+动作+事件”的逻辑进行组合，形成初步标题框架；\n" +
-                    "3. **精简优化**：删除冗余词汇，精简主语，调整语序，确保表意清晰；\n" +
+                    "3. **精简优化**：删除冗余词汇，精简主语，调整语序，确保表意清晰，字数控制在5-10字左右；\n" +
                     "4. **合规校验**：检查标题是否符合执行准则，若不符合则返回步骤1重新提取。\n" +
                     "\n" +
                     "# 输出规范\n" +
                     "- 输出结构：仅输出总结标题，无需附加任何解释性内容；\n" +
                     "- 语言风格：使用陈述性短句，简洁明了；\n" +
-                    "- 字数限制：严格控制在5-8字；\n";
+                    "- 字数限制：控制在5-10左右；\n";
 
             List<Map<String, String>> messages = new ArrayList<>();
             Map<String, String> systemMsg = new HashMap<>();
@@ -136,9 +136,9 @@ public class MainController {
                         // 清理标题，移除可能的标点符号和多余空格
                         title = title.trim().replaceAll("[，。！？、；：,.!?;:]", "");
                         // 限制标题长度
-                        if (title.length() > 15) {
-                            title = title.substring(0, 15);
-                        }
+//                        if (title.length() > 15) {
+//                            title = title.substring(0, 15);
+//                        }
                         log.info("生成的标题: {}", title);
                         return R.ok(title);
                     }
