@@ -25,14 +25,7 @@ import {
   saveSettings
 } from './services/storage';
 import { calculateDiff, copyToClipboard, exportAsPdf, exportConversationImage } from './services/utils';
-import {
-  ChevronDown,
-  FolderOpen,
-  GitCompare,
-  MessageSquare,
-  PanelLeftClose,
-  PanelRightClose
-} from 'lucide-react';
+import { ChevronDown, FolderOpen, GitCompare, MessageSquare, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { useScrollStore } from './stores/scrollStore';
 import { scrollEventBus } from './services/eventBus';
 
@@ -164,7 +157,7 @@ function App() {
   const rightResizerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
-  const { showScrollBottomButton, setShowScrollBottomButton } = useScrollStore();
+  const {showScrollBottomButton, setShowScrollBottomButton} = useScrollStore();
   const [draftConversation, setDraftConversation] = useState<Conversation | null>(null);
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
 
@@ -177,7 +170,7 @@ function App() {
   const checkIsAtBottom = useCallback(() => {
     const container = chatContainerRef.current;
     if (!container) return;
-    const { scrollTop, scrollHeight, offsetHeight } = container;
+    const {scrollTop, scrollHeight, offsetHeight} = container;
     // 距离底部小于300px，认为在底部
     const isAtBottom = scrollTop + offsetHeight > scrollHeight - 300;
     setShowScrollBottomButton(!isAtBottom);
@@ -197,7 +190,7 @@ function App() {
   // 订阅滚动事件
   useEffect(() => {
     const handleScrollEvent = (event: any) => {
-      const { method } = event;
+      const {method} = event;
       if (method === 'clickButtonToScrollToBottom' || method === 'forceScrollToBottomTrigger') {
         scrollToBottom(method);
       }
@@ -210,8 +203,8 @@ function App() {
   const handleScroll = useCallback(() => {
     const container = chatContainerRef.current;
     if (!container) return;
-    
-    const { scrollTop, scrollHeight, offsetHeight } = container;
+
+    const {scrollTop, scrollHeight, offsetHeight} = container;
     const distanceToBottom = scrollHeight - scrollTop - offsetHeight;
 
     // 流式输出期间的特殊处理：只检测用户的主动向上滚动
@@ -269,7 +262,7 @@ function App() {
     }
   }, [conversations]);
 
-  // 当切换会话时加载对应的文件
+  // 当切换会话时，清空选中的文件并滚动到底部
   useEffect(() => {
     if (currentConversation) {
       // 如果切换到的不是草稿对话，清空草稿
@@ -277,7 +270,11 @@ function App() {
         setDraftConversation(null);
       }
 
-      setProjectFiles(currentConversation.projectFiles || []);
+      // 只在不正在发送消息时才加载会话的文件列表
+      if (!isLoadingRef.current) {
+        setProjectFiles(currentConversation.projectFiles || []);
+      }
+
       setSelectedFile(null);
       // 保存当前会话ID
       saveCurrentConversationId(currentConversationId);
@@ -548,24 +545,24 @@ function App() {
       const streamCallback = useStream ? (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
         aiStreamedContent += chunk;
-        
+
         // 在AI流式输出达到200-300字符时触发标题生成（仅对新对话）
         if (!titleGenerationTriggered && existingMessages.length === 0 && aiStreamedContent.length >= 200 && aiStreamedContent.length <= 300) {
           titleGenerationTriggered = true;
           const conversationText = `用户: ${messageContent}\n\nAI: ${aiStreamedContent}`;
-          
+
           generateConversationTitle(conversationText)
-            .then(title => {
-              setConversations(prev => prev.map(c => {
-                if (c.id === convId) {
-                  return {...c, title};
-                }
-                return c;
-              }));
-            })
-            .catch(error => {
-              console.error('生成标题失败:', error);
-            });
+          .then(title => {
+            setConversations(prev => prev.map(c => {
+              if (c.id === convId) {
+                return {...c, title};
+              }
+              return c;
+            }));
+          })
+          .catch(error => {
+            console.error('生成标题失败:', error);
+          });
         }
       } : undefined;
 
@@ -610,34 +607,62 @@ function App() {
       setShowCompleteAnimation(true);
 
       if (response.success && response.content) {
-      // 提取代码块（仅在代码生成模式）
-      const codeBlocks = responseMode === 'code' ? extractCodeBlocks(response.content) : [];
+        // 提取代码块
+        const codeBlocks = extractCodeBlocks(response.content);
 
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: response.content,
-        timestamp: new Date(),
-        reasoning_content: response.reasoning_content,
-        thinking_time: response.thinking_time,
-        model: model,
-        codeBlocks: codeBlocks.map((block, index) => ({
-          id: `${generateId()}-${index}`,
-          ...block
-        }))
-      };
+        // 将生成的代码片段自动加入到文件列表
+        if (codeBlocks.length > 0) {
+          const newFiles: ProjectFile[] = codeBlocks.map((block, index) => {
+            const language = block.language || 'plaintext';
+            const filename = block.filename || `generated_${index + 1}.${getExtensionFromLanguage(language)}`;
 
-      // 添加助手消息到 conversations
-      setConversations(prev => prev.map(c => {
-        if (c.id === convId) {
-          return {
-            ...c,
-            messages: [...c.messages, assistantMessage],
-            updatedAt: new Date()
-          };
+            return {
+              id: generateId(),
+              name: filename,
+              path: filename,
+              content: block.code,
+              language: language,
+              originalContent: block.code,
+              history: []
+            };
+          });
+
+          setProjectFiles(prev => [...prev, ...newFiles]);
+
+          // 立即更新当前会话的文件列表，避免触发会话更新导致重新加载
+          setConversations(prev => prev.map(c => {
+            if (c.id === convId) {
+              return {...c, projectFiles: [...(c.projectFiles || []), ...newFiles]};
+            }
+            return c;
+          }));
         }
-        return c;
-      }));
+
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          content: response.content,
+          timestamp: new Date(),
+          reasoning_content: response.reasoning_content,
+          thinking_time: response.thinking_time,
+          model: model,
+          codeBlocks: codeBlocks.map((block, index) => ({
+            id: `${generateId()}-${index}`,
+            ...block
+          }))
+        };
+
+        // 添加助手消息到 conversations
+        setConversations(prev => prev.map(c => {
+          if (c.id === convId) {
+            return {
+              ...c,
+              messages: [...c.messages, assistantMessage],
+              updatedAt: new Date()
+            };
+          }
+          return c;
+        }));
       } else {
         // 错误消息
         const errorMessage: Message = {
