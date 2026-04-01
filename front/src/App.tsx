@@ -174,6 +174,8 @@ function App() {
   const rightResizerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightedElementRef = useRef<HTMLElement | null>(null);
   const {showScrollBottomButton, setShowScrollBottomButton} = useScrollStore();
   const [draftConversation, setDraftConversation] = useState<Conversation | null>(null);
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
@@ -666,9 +668,32 @@ function App() {
 
         // 将生成的代码片段自动加入到文件列表
         if (codeBlocks.length > 0) {
+          // 计算当前已有的最大code_xx序号
+          const getMaxCodeIndex = (files: ProjectFile[]): number => {
+            let maxIndex = 0;
+            files.forEach(file => {
+              const match = file.name.match(/^code_(\d+)\.\w+$/);
+              if (match) {
+                const index = parseInt(match[1], 10);
+                if (index > maxIndex) {
+                  maxIndex = index;
+                }
+              }
+            });
+            return maxIndex;
+          };
+
+          let currentMaxIndex = getMaxCodeIndex(projectFiles);
+
           const newFiles: ProjectFile[] = codeBlocks.map((block, index) => {
             const language = block.language || 'plaintext';
-            const filename = block.filename || `generated_${index + 1}.${getExtensionFromLanguage(language)}`;
+            let filename: string;
+            if (block.filename) {
+              filename = block.filename;
+            } else {
+              currentMaxIndex++;
+              filename = `code_${currentMaxIndex}.${getExtensionFromLanguage(language)}`;
+            }
             const anchorId = `${assistantMessageId}-${codeBlockIndices[index]}`;
             console.log(`Creating file with anchorId: ${anchorId}, filename: ${filename}, codeBlockIndex: ${index}, partIndex: ${codeBlockIndices[index]}`);
 
@@ -804,12 +829,23 @@ function App() {
   // 跳转到指定的锚点
   const jumpToAnchor = useCallback((anchorId: string) => {
     console.log('jumpToAnchor called with anchorId:', anchorId);
+
+    // 清除之前的高亮效果
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
+    if (highlightedElementRef.current) {
+      highlightedElementRef.current.classList.remove('ring-2', 'ring-blue-500');
+      highlightedElementRef.current = null;
+    }
+
     const element = document.getElementById(anchorId);
-    console.log('Found element:', element);
+    // console.log('Found element:', element);
 
     if (element) {
       const container = chatContainerRef.current;
-      console.log('Chat container:', container);
+      // console.log('Chat container:', container);
 
       if (container) {
         // 计算元素在容器中的位置
@@ -828,16 +864,22 @@ function App() {
 
         // 添加高亮效果
         element.classList.add('ring-2', 'ring-blue-500');
-        setTimeout(() => {
+        highlightedElementRef.current = element;
+        highlightTimeoutRef.current = setTimeout(() => {
           element.classList.remove('ring-2', 'ring-blue-500');
+          highlightTimeoutRef.current = null;
+          highlightedElementRef.current = null;
         }, 2000);
       } else {
         console.log('Chat container not found, using scrollIntoView');
         // 降级方案：使用scrollIntoView
         element.scrollIntoView({behavior: 'smooth', block: 'center'});
         element.classList.add('ring-2', 'ring-blue-500');
-        setTimeout(() => {
+        highlightedElementRef.current = element;
+        highlightTimeoutRef.current = setTimeout(() => {
           element.classList.remove('ring-2', 'ring-blue-500');
+          highlightTimeoutRef.current = null;
+          highlightedElementRef.current = null;
         }, 2000);
       }
     } else {

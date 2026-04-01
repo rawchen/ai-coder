@@ -1,3 +1,4 @@
+import { useMemo, memo } from 'react';
 import { CodeBlock, Message } from '../types';
 import { CodeBlockView } from './CodeBlockView';
 import { Bot, User } from 'lucide-react';
@@ -13,81 +14,82 @@ interface ChatMessageProps {
   isDark: boolean;
 }
 
-export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMessageProps) {
-  const isUser = message.role === 'user';
+// 解析消息中的代码块（包括未完成的代码块）
+function parseContent(content: string) {
+  const parts: {
+    type: 'text' | 'code';
+    content: string;
+    language?: string;
+    filename?: string;
+    incomplete?: boolean
+  }[] = [];
+  let lastIndex = 0;
 
-  // 解析消息中的代码块（包括未完成的代码块）
-  const parseContent = (content: string) => {
-    const parts: {
-      type: 'text' | 'code';
-      content: string;
-      language?: string;
-      filename?: string;
-      incomplete?: boolean
-    }[] = [];
-    let lastIndex = 0;
+  // 匹配完整的代码块
+  const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
 
-    // 匹配完整的代码块
-    const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
-    let match: RegExpExecArray | null;
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // 添加代码块之前的文本
+    if (match.index > lastIndex) {
+      parts.push({type: 'text', content: content.slice(lastIndex, match.index)});
+    }
 
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // 添加代码块之前的文本
-      if (match.index > lastIndex) {
-        parts.push({type: 'text', content: content.slice(lastIndex, match.index)});
+    // 添加完整的代码块
+    parts.push({
+      type: 'code',
+      language: match[1] || 'plaintext',
+      filename: match[2]?.trim(),
+      content: match[3].trim(),
+      incomplete: false
+    });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 添加剩余文本
+  if (lastIndex < content.length) {
+    const remaining = content.slice(lastIndex);
+
+    // 检查剩余文本是否包含未完成的代码块（只有 ``` 开头没有结尾）
+    const incompleteCodeMatch = remaining.match(/```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*)$/);
+
+    if (incompleteCodeMatch) {
+      // 添加代码块前的文本（如果有）
+      const beforeCode = remaining.slice(0, incompleteCodeMatch.index);
+      if (beforeCode) {
+        parts.push({type: 'text', content: beforeCode});
       }
 
-      // 添加完整的代码块
+      // 添加未完成的代码块
       parts.push({
         type: 'code',
-        language: match[1] || 'plaintext',
-        filename: match[2]?.trim(),
-        content: match[3].trim(),
-        incomplete: false
+        language: incompleteCodeMatch[1] || 'plaintext',
+        filename: incompleteCodeMatch[2]?.trim(),
+        content: incompleteCodeMatch[3].trim(),
+        incomplete: true // 标记为未完成
       });
-
-      lastIndex = match.index + match[0].length;
+    } else {
+      // 纯文本
+      parts.push({type: 'text', content: remaining});
     }
+  }
 
-    // 添加剩余文本
-    if (lastIndex < content.length) {
-      const remaining = content.slice(lastIndex);
+  return parts.length > 0 ? parts : [{type: 'text' as const, content}];
+}
 
-      // 检查剩余文本是否包含未完成的代码块（只有 ``` 开头没有结尾）
-      const incompleteCodeMatch = remaining.match(/```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*)$/);
+export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMessageProps) {
+  const isUser = message.role === 'user';
 
-      if (incompleteCodeMatch) {
-        // 添加代码块前的文本（如果有）
-        const beforeCode = remaining.slice(0, incompleteCodeMatch.index);
-        if (beforeCode) {
-          parts.push({type: 'text', content: beforeCode});
-        }
-
-        // 添加未完成的代码块
-        parts.push({
-          type: 'code',
-          language: incompleteCodeMatch[1] || 'plaintext',
-          filename: incompleteCodeMatch[2]?.trim(),
-          content: incompleteCodeMatch[3].trim(),
-          incomplete: true // 标记为未完成
-        });
-      } else {
-        // 纯文本
-        parts.push({type: 'text', content: remaining});
-      }
-    }
-
-    return parts.length > 0 ? parts : [{type: 'text' as const, content}];
-  };
-
-  const contentParts = parseContent(message.content);
+  // 缓存解析结果，只在 message.content 变化时重新解析
+  const contentParts = useMemo(() => parseContent(message.content), [message.content]);
 
   return (
     <div
-      className={`flex gap-4 p-4 ml-2 mr-2 mt-2 rounded-[20px] ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
+      className={`flex gap-4 px-0 md:px-4 py-4 ml-2 mr-2 mt-2 rounded-[20px] ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
       {/* 头像 */}
       <div
-        className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-600 to-pink-500'}`}>
+        className={`flex-shrink-0 w-0 h-0 md:w-8 md:h-8 rounded-lg flex items-center justify-center ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-600 to-pink-500'}`}>
         {isUser ? <User size={18} className="text-white"/> : <Bot size={18} className="text-white"/>}
       </div>
 
@@ -197,4 +199,4 @@ export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMess
       </div>
     </div>
   );
-}
+});

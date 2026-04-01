@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { ArrowLeftRight, Check, Copy, Download, FileCode, Loader2 } from 'lucide-react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
@@ -28,7 +28,27 @@ interface CodeBlockViewProps {
   id?: string;
 }
 
-export function CodeBlockView({
+// 映射语言名称到 Prism 支持的语言
+function getPrismLanguage(lang: string): string {
+  const mapping: { [key: string]: string } = {
+    js: 'javascript', ts: 'typescript', py: 'python',
+    jsx: 'javascript', tsx: 'typescript', sh: 'bash',
+    html: 'markup', vue: 'markup', xml: 'markup', yml: 'yaml', yaml: 'yaml'
+  };
+  return mapping[lang] || lang;
+}
+
+// 获取文件扩展名
+function getFileExtension(lang: string): string {
+  const extensions: { [key: string]: string } = {
+    javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
+    go: 'go', rust: 'rs', sql: 'sql', bash: 'sh', json: 'json',
+    css: 'css', html: 'html', markup: 'html', vue: 'html', yaml: 'yaml', yml: 'yaml', xml: 'xml'
+  };
+  return extensions[lang] || 'txt';
+}
+
+export const CodeBlockView = memo(function CodeBlockView({
   code,
   language,
   filename,
@@ -41,7 +61,19 @@ export function CodeBlockView({
 }: CodeBlockViewProps) {
   const [copied, setCopied] = useState(false);
 
-  console.log('CodeBlockView rendered with id:', id);
+  // 缓存高亮结果
+  const highlightedLines = useMemo(() => {
+    const prismLang = getPrismLanguage(language);
+    let highlighted = code;
+    try {
+      if (Prism.languages[prismLang]) {
+        highlighted = Prism.highlight(code, Prism.languages[prismLang], prismLang);
+      }
+    } catch {
+      // 如果高亮失败，使用原始代码
+    }
+    return highlighted.split('\n');
+  }, [code, language]);
 
   const handleCopy = async () => {
     try {
@@ -74,38 +106,6 @@ export function CodeBlockView({
     URL.revokeObjectURL(url);
     onDownload?.();
   };
-
-  const getFileExtension = (lang: string): string => {
-    const extensions: { [key: string]: string } = {
-      javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
-      go: 'go', rust: 'rs', sql: 'sql', bash: 'sh', json: 'json',
-      css: 'css', html: 'html', markup: 'html', vue: 'html', yaml: 'yaml', yml: 'yaml', xml: 'xml'
-    };
-    return extensions[lang] || 'txt';
-  };
-
-  // 映射语言名称到 Prism 支持的语言
-  const getPrismLanguage = (lang: string): string => {
-    const mapping: { [key: string]: string } = {
-      js: 'javascript', ts: 'typescript', py: 'python',
-      jsx: 'javascript', tsx: 'typescript', sh: 'bash',
-      html: 'markup', vue: 'markup', xml: 'markup', yml: 'yaml', yaml: 'yaml'
-    };
-    return mapping[lang] || lang;
-  };
-
-  const prismLang = getPrismLanguage(language);
-  let highlighted = code;
-
-  try {
-    if (Prism.languages[prismLang]) {
-      highlighted = Prism.highlight(code, Prism.languages[prismLang], prismLang);
-    }
-  } catch {
-    // 如果高亮失败，使用原始代码
-  }
-
-  const lines = highlighted.split('\n');
 
   return (
     <div
@@ -173,7 +173,7 @@ export function CodeBlockView({
       <div className="overflow-x-auto prose-pre">
         <pre className={`p-4 text-sm leading-relaxed ${isDark ? '' : ''}`}>
           <code className="font-mono">
-            {lines.map((line, index) => (
+            {highlightedLines.map((line, index) => (
               <div key={index} className="flex">
                 <span
                   className={`select-none w-10 text-right pr-4 flex-shrink-0 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
@@ -190,4 +190,4 @@ export function CodeBlockView({
       </div>
     </div>
   );
-}
+});
