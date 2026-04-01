@@ -127,7 +127,7 @@ export function ConversationList({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100%-3rem)]">
       {/* 新建对话按钮 */}
       <div
         className={`p-3 bg-gradient-to-r from-transparent to-transparent bg-bottom bg-no-repeat bg-[length:calc(100%-2rem)_1px] ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>

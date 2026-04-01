@@ -1113,14 +1113,15 @@ function App() {
       >
         {/* 收起状态：只显示图标 */}
         {rightPanelCollapsed && (
-          <div className="flex flex-col items-center gap-4 py-4">
+          <div className="flex flex-col items-center gap-4 py-2">
             <div
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 cursor-pointer group relative"
+              className={`flex p-2 rounded-lg items-center justify-center flex-shrink-0 cursor-pointer group relative text-gray-300 ${isDark ? 'hover:text-white hover:bg-gray-700' : 'hover:bg-gray-200'}`}
               onClick={() => setRightPanelCollapsed(false)}
             >
-              <Code2 size={20} className="text-white opacity-100 group-hover:opacity-0 transition-opacity"/>
               <PanelRightClose size={20}
-                               className="absolute text-white opacity-0 group-hover:opacity-100 transition-opacity rotate-180"/>
+                               className=" rounded-lg opacity-100 transition-opacity rotate-180"/>
+              {/*<PanelRightClose size={20}*/}
+              {/*                 className="absolute text-white opacity-0 group-hover:opacity-100 transition-opacity rotate-180"/>*/}
             </div>
             <button
               onClick={() => setRightPanelTab('files')}
