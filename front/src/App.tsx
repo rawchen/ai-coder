@@ -627,11 +627,50 @@ function App() {
         // 提取代码块
         const codeBlocks = extractCodeBlocks(response.content);
 
+        // 计算每个代码块在contentParts中的实际索引
+        // 通过模拟ChatMessage中的解析逻辑来确定索引
+        const parts: {type: 'text' | 'code'}[] = [];
+        let lastIndex = 0;
+        const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
+        let match: RegExpExecArray | null;
+        let codeBlockCounter = 0;
+        const codeBlockIndices: number[] = []; // 存储每个代码块在parts中的索引
+
+        while ((match = codeBlockRegex.exec(response.content)) !== null) {
+          if (match.index > lastIndex) {
+            parts.push({type: 'text'});
+          }
+          parts.push({type: 'code'});
+          codeBlockIndices.push(parts.length - 1); // 记录代码块的索引
+          lastIndex = match.index + match[0].length;
+          codeBlockCounter++;
+        }
+        if (lastIndex < response.content.length) {
+          parts.push({type: 'text'});
+        }
+
+        const assistantMessageId = generateId();
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: response.content,
+          timestamp: new Date(),
+          reasoning_content: response.reasoning_content,
+          thinking_time: response.thinking_time,
+          model: model,
+          codeBlocks: codeBlocks.map((block, index) => ({
+            id: `${assistantMessageId}-${codeBlockIndices[index]}`,
+            ...block
+          }))
+        };
+
         // 将生成的代码片段自动加入到文件列表
         if (codeBlocks.length > 0) {
           const newFiles: ProjectFile[] = codeBlocks.map((block, index) => {
             const language = block.language || 'plaintext';
             const filename = block.filename || `generated_${index + 1}.${getExtensionFromLanguage(language)}`;
+            const anchorId = `${assistantMessageId}-${codeBlockIndices[index]}`;
+            console.log(`Creating file with anchorId: ${anchorId}, filename: ${filename}, codeBlockIndex: ${index}, partIndex: ${codeBlockIndices[index]}`);
 
             return {
               id: generateId(),
@@ -640,7 +679,8 @@ function App() {
               content: block.code,
               language: language,
               originalContent: block.code,
-              history: []
+              history: [],
+              anchorId: anchorId
             };
           });
 
@@ -654,20 +694,6 @@ function App() {
             return c;
           }));
         }
-
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: response.content,
-          timestamp: new Date(),
-          reasoning_content: response.reasoning_content,
-          thinking_time: response.thinking_time,
-          model: model,
-          codeBlocks: codeBlocks.map((block, index) => ({
-            id: `${generateId()}-${index}`,
-            ...block
-          }))
-        };
 
         // 添加助手消息到 conversations
         setConversations(prev => prev.map(c => {
@@ -775,6 +801,50 @@ function App() {
     return map[ext] || 'plaintext';
   };
 
+  // 跳转到指定的锚点
+  const jumpToAnchor = useCallback((anchorId: string) => {
+    console.log('jumpToAnchor called with anchorId:', anchorId);
+    const element = document.getElementById(anchorId);
+    console.log('Found element:', element);
+
+    if (element) {
+      const container = chatContainerRef.current;
+      console.log('Chat container:', container);
+
+      if (container) {
+        // 计算元素在容器中的位置
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const scrollTop = container.scrollTop;
+        const offsetTop = elementRect.top - containerRect.top + scrollTop - container.clientHeight / 2 + elementRect.height / 2;
+
+        console.log('Scrolling to:', offsetTop);
+
+        // 平滑滚动到目标位置
+        container.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
+
+        // 添加高亮效果
+        element.classList.add('ring-2', 'ring-blue-500');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-blue-500');
+        }, 2000);
+      } else {
+        console.log('Chat container not found, using scrollIntoView');
+        // 降级方案：使用scrollIntoView
+        element.scrollIntoView({behavior: 'smooth', block: 'center'});
+        element.classList.add('ring-2', 'ring-blue-500');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-blue-500');
+        }, 2000);
+      }
+    } else {
+      console.log('Element not found with id:', anchorId);
+    }
+  }, []);
+
   // 应用代码到项目 - 使用最新版本进行比较
   const applyCode = useCallback((codeBlock: CodeBlock) => {
     // 如果有选中的文件，使用选中文件的当前内容进行比较
@@ -819,7 +889,8 @@ function App() {
         content: codeBlock.code,
         language: codeBlock.language,
         originalContent: codeBlock.code,
-        history: []
+        history: [],
+        anchorId: codeBlock.id
       };
       setProjectFiles(prev => [...prev, newFile]);
       setSelectedFile(newFile);
@@ -1261,6 +1332,7 @@ function App() {
                   onDeleteFile={deleteFile}
                   onRestoreHistory={restoreHistory}
                   isDark={isDark}
+                  onJumpToAnchor={jumpToAnchor}
                 />
               ) : (
                 <div className="p-3">

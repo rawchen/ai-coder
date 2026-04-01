@@ -25,6 +25,7 @@ interface CodeBlockViewProps {
   onDownload?: () => void;
   incomplete?: boolean;
   isDark: boolean;
+  id?: string;
 }
 
 export function CodeBlockView({
@@ -35,9 +36,12 @@ export function CodeBlockView({
   onApply,
   onDownload,
   incomplete,
-  isDark
+  isDark,
+  id
 }: CodeBlockViewProps) {
   const [copied, setCopied] = useState(false);
+
+  console.log('CodeBlockView rendered with id:', id);
 
   const handleCopy = async () => {
     try {
@@ -105,6 +109,7 @@ export function CodeBlockView({
 
   return (
     <div
+      id={id}
       className={`rounded-lg overflow-hidden border ${isDark ? 'bg-gray-900' : 'bg-gray-50'} ${incomplete ? 'border-blue-600/50' : (isDark ? 'border-gray-700' : 'border-gray-300')}`}>
       {/* 标题栏 */}
       <div

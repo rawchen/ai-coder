@@ -41,6 +41,7 @@ export interface ProjectFile {
   language: string;
   originalContent?: string;
   history: FileHistory[];
+  anchorId?: string; // 关联的代码块锚点ID
 }
 
 // 文件历史类型

@@ -146,6 +146,7 @@ export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMess
                 part.type === 'code' ? (
                   <CodeBlockView
                     key={index}
+                    id={`${message.id}-${index}`}
                     code={part.content}
                     language={part.language || 'plaintext'}
                     filename={part.filename}

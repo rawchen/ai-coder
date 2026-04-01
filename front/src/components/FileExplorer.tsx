@@ -10,6 +10,7 @@ interface FileExplorerProps {
   onDeleteFile: (fileId: string) => void;
   onRestoreHistory: (file: ProjectFile, history: FileHistory) => void;
   isDark: boolean;
+  onJumpToAnchor?: (anchorId: string) => void;
 }
 
 export function FileExplorer({
@@ -18,7 +19,8 @@ export function FileExplorer({
   onSelectFile,
   onDeleteFile,
   onRestoreHistory,
-  isDark
+  isDark,
+  onJumpToAnchor
 }: FileExplorerProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [showHistoryFor, setShowHistoryFor] = useState<string | null>(null);
@@ -68,7 +70,14 @@ export function FileExplorer({
             className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
               selectedFile?.id === file.id ? 'bg-blue-500/20 border-l-2 border-blue-500' : ''
             } ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50'}`}
-            onClick={() => onSelectFile(file)}
+            onClick={() => {
+              onSelectFile(file);
+              // 如果文件有关联的锚点，跳转到对应的代码块
+              if (file.anchorId && onJumpToAnchor) {
+                console.log('FileExplorer: Jumping to anchor', file.anchorId, 'for file', file.name);
+                onJumpToAnchor(file.anchorId);
+              }
+            }}
           >
             <button
               onClick={(e) => {
