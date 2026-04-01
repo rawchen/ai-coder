@@ -84,7 +84,7 @@ export function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMess
 
   return (
     <div
-      className={`flex gap-4 p-4 ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
+      className={`flex gap-4 p-4 ml-2 mr-2 mt-2 rounded-[20px] ${isUser ? (isDark ? 'bg-gray-800/50' : 'bg-gray-100/50') : (isDark ? 'bg-gray-900/50' : 'bg-gray-50/50')}`}>
       {/* 头像 */}
       <div
         className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-purple-600 to-pink-500'}`}>

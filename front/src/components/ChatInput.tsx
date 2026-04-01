@@ -1,5 +1,17 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ChevronDown, File, Loader2, MessageCircle, Radio, Send, Settings, Sparkles, Upload, X } from 'lucide-react';
+import {
+  Brain,
+  ChevronDown,
+  File,
+  Loader2,
+  MessageCircle,
+  Radio,
+  Send,
+  Settings,
+  Sparkles,
+  Upload,
+  X
+} from 'lucide-react';
 import { ModelType, ProjectFile, ResponseMode, SimpleQAMode, StreamMode, StyleOptions } from '../types';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
@@ -212,7 +224,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const displaySuggestions = suggestions.length > 0 ? suggestions : defaultSuggestions;
 
   return (
-    <div className={`border-t p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+    <div
+      className={`p-4 absolute bottom-0 left-0 right-0 rounded-tl-[25px] rounded-tr-[25px] ml-20 mr-20 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
       {/* 智能推荐 */}
       {showSuggestions && (
         <div ref={suggestionsRef} className="mb-4 grid grid-cols-2 gap-2">
@@ -446,8 +459,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
-                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                    onClick={() => onModelChange('claude')}
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('claude')}
                 >
                   <span className="font-medium">Claude</span>
                   <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
@@ -469,6 +482,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             title="智能推荐"
           >
             <Sparkles size={18}/>
+          </button>
+
+          <button
+            onClick={toggleSimpleQAMode}
+            className={`p-1.5 rounded-lg transition-colors ${responseMode === 'code' ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}`}
+            title={responseMode === 'code' ? '思考模式' : '简单模式'}
+          >
+            <Brain size={18}/>
           </button>
 
           <button

@@ -1,7 +1,7 @@
 import { Conversation } from '../types';
-import { MessageSquare, Plus, Trash2, Search, X, Loader2, Command } from 'lucide-react';
+import { Command, Loader2, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react';
 import { formatDate } from '../services/storage';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -62,7 +62,7 @@ export function ConversationList({
     const container = scrollContainerRef.current;
     if (!container || isLoading || !hasMore) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = container;
+    const {scrollTop, scrollHeight, clientHeight} = container;
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
     // 当距离底部小于阈值时加载更多
@@ -87,7 +87,7 @@ export function ConversationList({
 
   // 快捷键处理函数
   const handleShortcutKey = useCallback((e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    if ((e.ctrlKey) && e.key === 'f') {
       e.preventDefault();
       searchInputRef.current?.focus();
     }
@@ -129,7 +129,8 @@ export function ConversationList({
   return (
     <div className="flex flex-col h-full">
       {/* 新建对话按钮 */}
-      <div className={`p-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div
+        className={`p-3 bg-gradient-to-r from-transparent to-transparent bg-bottom bg-no-repeat bg-[length:calc(100%-2rem)_1px] ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>
         <button
           onClick={handleNewConversation}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
@@ -140,7 +141,8 @@ export function ConversationList({
       </div>
 
       {/* 搜索框 */}
-      <div className={`p-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div
+        className={`p-3 bg-gradient-to-r from-transparent to-transparent bg-bottom bg-no-repeat bg-[length:calc(100%-2rem)_1px] ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>
         <div className="relative">
           <Search
             size={16}
@@ -160,9 +162,10 @@ export function ConversationList({
           />
           {/* 快捷键提示 */}
           {!searchQuery && (
-            <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
-              isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
-            }`}>
+            <div
+              className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
+                isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
+              }`}>
               <Command size={12}/>
               <span className="font-medium">F</span>
             </div>
@@ -216,7 +219,8 @@ export function ConversationList({
                   <div className="flex-1 min-w-0 pl-2">
                     <div className={`text-sm truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
                       {matchCount > 0 && searchQuery ? (
-                        <span className={`text-xs px-1.5 py-0.5 rounded mr-2 ${isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded mr-2 ${isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
                           {matchCount}
                         </span>
                       ) : null}
@@ -263,7 +267,8 @@ export function ConversationList({
       </div>
 
       {/* 底部信息 */}
-      <div className={`p-3 border-t text-center ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div
+        className={`p-3 bg-gradient-to-r from-transparent to-transparent bg-top bg-no-repeat bg-[length:calc(100%-2rem)_1px] text-center ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>
         <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
           数据存储在本地浏览器
         </p>

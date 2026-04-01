@@ -1,4 +1,3 @@
-export { Header } from './Header';
 export { ChatInput } from './ChatInput';
 export type { ChatInputRef } from './ChatInput';
 export { ChatMessage } from './ChatMessage';
