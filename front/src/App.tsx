@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatInput, ChatInputRef, ChatMessage, ConversationList, DiffViewer, FileExplorer } from './components';
+import { ChatInput, ChatInputRef, ChatMessage, ConversationList, ConversationListRef, DiffViewer, FileExplorer } from './components';
 import {
   CodeBlock,
   Conversation,
@@ -186,6 +186,7 @@ function App() {
   const rightResizerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
+  const conversationListRef = useRef<ConversationListRef>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightedElementRef = useRef<HTMLElement | null>(null);
   const {showScrollBottomButton, setShowScrollBottomButton} = useScrollStore();
@@ -1253,11 +1254,12 @@ function App() {
         }}
       >
         {/* Logo区域 */}
-        <div className="h-14 flex items-center justify-between px-3 pt-2">
+        <div className="h-14 flex items-center justify-between px-3 pt-4">
           <div className="flex items-center gap-3">
             {!leftPanelCollapsed ? (
               <div
-                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                onClick={() => window.location.reload()}
               >
                 <Code2 size={20} className="text-white"/>
               </div>
@@ -1272,7 +1274,7 @@ function App() {
               </div>
             )}
             {!leftPanelCollapsed && (
-              <div className="min-w-0" onClick={() => window.location.reload()}>
+              <div className="min-w-0 cursor-pointer" onClick={() => window.location.reload()}>
                 <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AiCoder</h1>
                 <p className={`text-xs -mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>智能创作平台</p>
               </div>
@@ -1296,13 +1298,20 @@ function App() {
         {leftPanelCollapsed && (
           <div className="flex flex-col items-center gap-4 py-4">
             <button
-              onClick={createNewConversation}
+              onClick={() => {
+                setLeftPanelCollapsed(false);
+                createNewConversation();
+              }}
               className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
               title="新建对话"
             >
               <Plus size={20}/>
             </button>
             <button
+              onClick={() => {
+                setLeftPanelCollapsed(false);
+                setTimeout(() => conversationListRef.current?.focusSearch(), 100);
+              }}
               className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
               title="搜索对话"
             >
@@ -1314,6 +1323,7 @@ function App() {
         {/* 展开状态：显示完整列表 */}
         {!leftPanelCollapsed && (
           <ConversationList
+            ref={conversationListRef}
             conversations={conversations}
             currentId={currentConversationId}
             onSelect={handleSelectConversation}

@@ -5,3 +5,4 @@ export { CodeBlockView } from './CodeBlockView';
 export { DiffViewer } from './DiffViewer';
 export { FileExplorer } from './FileExplorer';
 export { ConversationList } from './ConversationList';
+export type { ConversationListRef } from './ConversationList';

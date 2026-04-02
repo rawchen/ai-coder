@@ -1,7 +1,7 @@
 import { Conversation } from '../types';
 import { Command, Loader2, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react';
 import { formatDate } from '../services/storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, forwardRef, useImperativeHandle, useRef, useState } from 'react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -12,14 +12,18 @@ interface ConversationListProps {
   isDark: boolean;
 }
 
-export function ConversationList({
+export interface ConversationListRef {
+  focusSearch: () => void;
+}
+
+export const ConversationList = forwardRef<ConversationListRef, ConversationListProps>(function ConversationList({
   conversations,
   currentId,
   onSelect,
   onNew,
   onDelete,
   isDark
-}: ConversationListProps) {
+}: ConversationListProps, ref) {
   const [searchQuery, setSearchQuery] = useState('');
   const [displayedCount, setDisplayedCount] = useState(20);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +110,13 @@ export function ConversationList({
       searchInputRef.current?.focus();
     }
   }, []);
+
+  // 暴露搜索框焦点方法
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      searchInputRef.current?.focus();
+    }
+  }), []);
 
   // 快捷键监听 (Ctrl+F 或 Command+F) - 仅在搜索框无文本时绑定
   useEffect(() => {
@@ -289,4 +300,4 @@ export function ConversationList({
       </div>
     </div>
   );
-}
+});
