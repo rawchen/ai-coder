@@ -1,5 +1,5 @@
-import { useMemo, memo } from 'react';
-import { CodeBlock, Message } from '../types';
+import { memo, useMemo } from 'react';
+import { CodeBlock, Message, MessageContent } from '../types';
 import { CodeBlockView } from './CodeBlockView';
 import { Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -15,7 +15,12 @@ interface ChatMessageProps {
 }
 
 // 解析消息中的代码块（包括未完成的代码块）
-function parseContent(content: string) {
+function parseContent(content: string | MessageContent[]) {
+  // 如果content是数组格式，返回空数组（用户消息直接显示，不需要解析）
+  if (Array.isArray(content)) {
+    return [];
+  }
+
   const parts: {
     type: 'text' | 'code';
     content: string;
@@ -110,9 +115,28 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
         </div>
 
         <div className={`space-y-3 overflow-visible ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-          {/* 用户消息：直接显示原始文本 */}
+          {/* 用户消息：支持文本和图像 */}
           {isUser ? (
-            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="space-y-2">
+              {typeof message.content === 'string' ? (
+                <div className="whitespace-pre-wrap break-words">{message.content}</div>
+              ) : (
+                message.content.map((item, index) => (
+                  item.type === 'text' ? (
+                    <div key={index} className="whitespace-pre-wrap break-words">{item.text}</div>
+                  ) : item.type === 'image_url' ? (
+                    <div key={index} className="mt-2">
+                      <img
+                        src={item.image_url?.url}
+                        alt="上传的图片"
+                        className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600"
+                        style={{maxHeight: '400px'}}
+                      />
+                    </div>
+                  ) : null
+                ))
+              )}
+            </div>
           ) : (
             /* 思考内容 - 仅对助手消息且存在思考内容时显示 */
             <>

@@ -2,12 +2,21 @@
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | MessageContent[];
   timestamp: Date;
   codeBlocks?: CodeBlock[];
   reasoning_content?: string;
   thinking_time?: number;
   model?: ModelType; // 用于显示使用的模型（仅新消息）
+}
+
+// 消息内容类型
+export interface MessageContent {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: {
+    url: string;
+  };
 }
 
 // 代码块类型
@@ -42,6 +51,11 @@ export interface ProjectFile {
   originalContent?: string;
   history: FileHistory[];
   anchorId?: string; // 关联的代码块锚点ID
+  type?: 'code' | 'image'; // 文件类型
+  imageUrl?: string; // 图像文件的OSS URL
+  previewUrl?: string; // 本地预览URL（用于上传前预览）
+  uploadProgress?: number; // 上传进度 0-100
+  uploadStatus?: 'pending' | 'uploading' | 'success' | 'error'; // 上传状态
 }
 
 // 文件历史类型

@@ -6,6 +6,7 @@ import {
   DiffResult,
   FileHistory,
   Message,
+  MessageContent,
   ModelType,
   ProjectFile,
   ResponseMode,
@@ -13,7 +14,15 @@ import {
   StreamMode,
   StyleOptions
 } from './types';
-import { callAI, detectLanguage, extractCodeBlocks, generateConversationTitle } from './services/api';
+import {
+  callAI,
+  detectLanguage,
+  extractCodeBlocks,
+  generateConversationTitle,
+  isCodeFile,
+  isImageFile,
+  uploadFileToOSS
+} from './services/api';
 import {
   addFileHistory,
   generateId,
@@ -449,12 +458,102 @@ function App() {
     // 如果没有内容且没有暂存文件，直接返回
     if (!content.trim() && stagedFiles.length === 0) return;
 
-    // 如果只有暂存文件没有内容，生成默认消息
-    const messageContent = content.trim() || `请分析以下文件：\n${stagedFiles.map(f => f.name).join('\n')}`;
+    // 上传图像文件到OSS
+    const imageFiles = stagedFiles.filter(f => f.type === 'image');
+    let uploadedImageUrls: string[] = [];
+
+    if (imageFiles.length > 0) {
+      try {
+        // 更新上传状态
+        setStagedFiles(prev => prev.map(f =>
+          f.type === 'image' ? {...f, uploadStatus: 'uploading', uploadProgress: 0} : f
+        ));
+
+        // 逐个上传图像文件
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          try {
+            const fileObj = stagedFiles.find(f => f.id === file.id);
+            if (fileObj && fileObj.previewUrl) {
+              // 从预览URL创建File对象
+              const response = await fetch(fileObj.previewUrl);
+              const blob = await response.blob();
+              const fileToUpload = new File([blob], file.name, {type: blob.type});
+
+              const url = await uploadFileToOSS(fileToUpload, (fileName, percent) => {
+                // 更新上传进度
+                setStagedFiles(prev => prev.map(f =>
+                  f.id === file.id ? {...f, uploadProgress: percent} : f
+                ));
+              });
+
+              uploadedImageUrls.push(url);
+
+              // 更新上传成功状态
+              setStagedFiles(prev => prev.map(f =>
+                f.id === file.id ? {...f, uploadStatus: 'success', imageUrl: url} : f
+              ));
+            }
+          } catch (error) {
+            console.error(`上传文件 ${file.name} 失败:`, error);
+            // 更新上传失败状态
+            setStagedFiles(prev => prev.map(f =>
+              f.id === file.id ? {...f, uploadStatus: 'error'} : f
+            ));
+          }
+        }
+      } catch (error) {
+        console.error('上传图像文件失败:', error);
+      }
+    }
+
+    // 构建消息内容
+    let messageContent: string | MessageContent[];
+    const codeFiles = stagedFiles.filter(f => f.type === 'code');
+
+    if (uploadedImageUrls.length > 0) {
+      // 有图像文件，使用数组格式
+      const contentArray: MessageContent[] = [];
+
+      // 添加文本内容
+      let textContent = content.trim();
+      if (!textContent) {
+        // 如果没有文本内容，生成默认文本
+        if (codeFiles.length > 0) {
+          textContent = `请分析以下文件：\n\n代码文件:\n${codeFiles.map(f => f.name).join('\n')}`;
+        } else {
+          textContent = '请分析图片';
+        }
+      }
+
+      contentArray.push({
+        type: 'text',
+        text: textContent
+      });
+
+      // 添加图像URL
+      uploadedImageUrls.forEach(url => {
+        contentArray.push({
+          type: 'image_url',
+          image_url: {
+            url: url
+          }
+        });
+      });
+
+      messageContent = contentArray;
+    } else {
+      // 没有图像文件，使用字符串格式
+      const codeFilesText = codeFiles.length > 0
+        ? `\n\n代码文件:\n${codeFiles.map(f => f.name).join('\n')}`
+        : '';
+      messageContent = content.trim() || `请分析以下文件：${codeFilesText}`;
+    }
 
     // 确保有当前对话
     let convId = currentConversationId;
     let isDraft = false;
+
     let existingMessages: Message[] = [];
     let titleGenerationTriggered = false; // 标记是否已触发标题生成
     let aiStreamedContent = ''; // 用于追踪AI流式输出的内容
@@ -502,11 +601,21 @@ function App() {
     // 添加用户消息到 conversations
     setConversations(prev => prev.map(c => {
       if (c.id === convId) {
+        // 生成标题文本
+        let titleText: string;
+        if (typeof messageContent === 'string') {
+          titleText = messageContent;
+        } else {
+          // 如果是数组格式，提取文本内容
+          const textItem = messageContent.find(item => item.type === 'text');
+          titleText = textItem?.text || '图片分析';
+        }
+
         return {
           ...c,
           messages: [...c.messages, userMessage],
           updatedAt: new Date(),
-          title: c.messages.length === 0 ? messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : '') : c.title
+          title: c.messages.length === 0 ? titleText.slice(0, 30) + (titleText.length > 30 ? '...' : '') : c.title
         };
       }
       return c;
@@ -522,16 +631,33 @@ function App() {
       })),
       {role: 'user', content: messageContent}
     ];
+    console.log('发送的消息历史:', JSON.stringify(messageHistory, null, 2));
 
     // 添加暂存文件到项目文件
     if (stagedFiles.length > 0) {
       setProjectFiles(prev => [...prev, ...stagedFiles]);
-      // 添加暂存文件上下文
-      const filesContext = stagedFiles.map(f => `文件: ${f.name}\n\`\`\`${f.language}\n${f.content}\n\`\`\``).join('\n\n');
-      messageHistory.unshift({
-        role: 'system',
-        content: `用户上传了以下新文件:\n\n${filesContext}\n\n请分析这些文件内容并回答用户的问题。`
-      });
+
+      // 区分图像文件和代码文件
+      const imageFiles = stagedFiles.filter(f => f.type === 'image' && f.imageUrl);
+      const codeFiles = stagedFiles.filter(f => f.type === 'code');
+
+      // 构建文件上下文
+      let filesContext = '';
+
+      if (imageFiles.length > 0) {
+        filesContext += `图像文件:\n${imageFiles.map(f => `- ${f.name}: ${f.imageUrl}`).join('\n')}\n\n`;
+      }
+
+      if (codeFiles.length > 0) {
+        filesContext += `代码文件:\n${codeFiles.map(f => `文件: ${f.name}\n\`\`\`${f.language}\n${f.content}\n\`\`\``).join('\n\n')}`;
+      }
+
+      if (filesContext) {
+        messageHistory.unshift({
+          role: 'system',
+          content: `用户上传了以下文件:\n\n${filesContext}\n请分析这些文件内容并回答用户的问题。`
+        });
+      }
     }
 
     // 添加项目文件上下文（排除刚添加的暂存文件）
@@ -568,7 +694,16 @@ function App() {
         // 在AI流式输出达到200-300字符时触发标题生成（仅对新对话）
         if (!titleGenerationTriggered && existingMessages.length === 0 && aiStreamedContent.length >= 200 && aiStreamedContent.length <= 300) {
           titleGenerationTriggered = true;
-          const conversationText = `用户: ${messageContent}\n\nAI: ${aiStreamedContent}`;
+          // 处理messageContent可能是数组格式的情况
+          let userText: string;
+          if (typeof messageContent === 'string') {
+            userText = messageContent;
+          } else {
+            // 提取文本内容
+            const textItem = messageContent.find(item => item.type === 'text');
+            userText = textItem?.text || '图片分析';
+          }
+          const conversationText = `用户: ${userText}\n\nAI: ${aiStreamedContent}`;
 
           generateConversationTitle(conversationText)
           .then(title => {
@@ -631,7 +766,7 @@ function App() {
 
         // 计算每个代码块在contentParts中的实际索引
         // 通过模拟ChatMessage中的解析逻辑来确定索引
-        const parts: {type: 'text' | 'code'}[] = [];
+        const parts: { type: 'text' | 'code' }[] = [];
         let lastIndex = 0;
         const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
         let match: RegExpExecArray | null;
@@ -776,7 +911,12 @@ function App() {
       setTimeout(() => {
         setShowCompleteAnimation(false);
       }, 3000);
-      // 清空暂存文件
+      // 清空暂存文件，释放图像预览URL
+      stagedFiles.forEach(file => {
+        if (file.type === 'image' && file.previewUrl) {
+          URL.revokeObjectURL(file.previewUrl);
+        }
+      });
       setStagedFiles([]);
       // 如果是草稿对话，清空草稿
       if (isDraft) {
@@ -791,19 +931,40 @@ function App() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const content = await file.text();
-      const extension = file.name.split('.').pop() || '';
-      const language = detectLanguage(content) || getLanguageFromExtension(extension);
 
-      newFiles.push({
-        id: generateId(),
-        name: file.name,
-        path: file.name,
-        content,
-        language,
-        originalContent: content,
-        history: []
-      });
+      if (isImageFile(file)) {
+        // 图像文件：创建预览URL，标记为待上传
+        const previewUrl = URL.createObjectURL(file);
+        newFiles.push({
+          id: generateId(),
+          name: file.name,
+          path: file.name,
+          content: '',
+          language: 'image',
+          originalContent: '',
+          history: [],
+          type: 'image',
+          previewUrl,
+          uploadProgress: 0,
+          uploadStatus: 'pending'
+        });
+      } else if (isCodeFile(file)) {
+        // 代码文件：读取内容
+        const content = await file.text();
+        const extension = file.name.split('.').pop() || '';
+        const language = detectLanguage(content) || getLanguageFromExtension(extension);
+
+        newFiles.push({
+          id: generateId(),
+          name: file.name,
+          path: file.name,
+          content,
+          language,
+          originalContent: content,
+          history: [],
+          type: 'code'
+        });
+      }
     }
 
     // 暂存文件，等待用户发送消息时一起提交
@@ -812,7 +973,13 @@ function App() {
 
   // 移除暂存的文件
   const removeStagedFile = useCallback((fileId: string) => {
-    setStagedFiles(prev => prev.filter(f => f.id !== fileId));
+    setStagedFiles(prev => {
+      const fileToRemove = prev.find(f => f.id === fileId);
+      if (fileToRemove?.type === 'image' && fileToRemove.previewUrl) {
+        URL.revokeObjectURL(fileToRemove.previewUrl);
+      }
+      return prev.filter(f => f.id !== fileId);
+    });
   }, []);
 
   // 从扩展名获取语言

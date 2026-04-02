@@ -1,4 +1,32 @@
-import { ApiResponse, ModelType, ResponseMode, SimpleQAMode } from '../types';
+import { ApiResponse, ModelType, ResponseMode, SimpleQAMode, MessageContent } from '../types';
+import OSS from 'ali-oss';
+
+// OSS STS 凭证类型
+interface StsToken {
+  accessKeyId: string;
+  accessKeySecret: string;
+  securityToken: string;
+  expiration: string;
+  bucketName: string;
+  endpoint: string;
+  region: string;
+  customDomain?: string;
+}
+
+// 上传进度回调类型
+type UploadProgressCallback = (fileName: string, percent: number) => void;
+
+// OSS STS 凭证类型
+interface StsToken {
+  accessKeyId: string;
+  accessKeySecret: string;
+  securityToken: string;
+  expiration: string;
+  bucketName: string;
+  endpoint: string;
+  region: string;
+  customDomain?: string;
+}
 
 // API 配置类型定义
 interface ApiConfig {
@@ -45,7 +73,7 @@ function getLengthLimitHint(length: 'short' | 'medium' | 'long'): string {
 
 // 调用 AI API
 export async function callAI(
-  messages: { role: string; content: string }[],
+  messages: { role: string; content: string | MessageContent[] }[],
   model: ModelType,
   onStream?: (chunk: string) => void,
   onReasoningStream?: (chunk: string) => void,
@@ -382,4 +410,88 @@ export async function generateConversationTitle(conversationContent: string): Pr
     // 如果请求失败，返回简单的截断标题
     return conversationContent.slice(0, 15) + (conversationContent.length > 15 ? '...' : '');
   }
+}
+
+// 获取STS临时凭证
+export async function getStsToken(): Promise<StsToken> {
+  const response = await fetch(`${BACKEND_URL}/oss/sts-token`);
+  const data = await response.json();
+
+  if (data.code !== 200) {
+    throw new Error(data.msg || '获取STS凭证失败');
+  }
+
+  return data.data;
+}
+
+// 上传文件到OSS
+export async function uploadFileToOSS(
+  file: File,
+  onProgress?: UploadProgressCallback
+): Promise<string> {
+  const stsToken = await getStsToken();
+
+  // 生成唯一文件名
+  const timestamp = Date.now();
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  const fileExt = file.name.split('.').pop() || '';
+  const objectKey = `temp/${timestamp}_${randomStr}.${fileExt}`;
+
+  // 使用OSS SDK上传
+  // const OSS = require('ali-oss');
+
+  const client = new OSS({
+    region: stsToken.region,
+    accessKeyId: stsToken.accessKeyId,
+    accessKeySecret: stsToken.accessKeySecret,
+    stsToken: stsToken.securityToken,
+    bucket: stsToken.bucketName,
+    secure: true
+  });
+
+  // // 分片上传配置
+  // const options = {
+  //   progress: (p: number) => {
+  //     if (onProgress) {
+  //       onProgress(file.name, Math.floor(p * 100));
+  //     }
+  //   },
+  //   partSize: 1024 * 1024 // 1MB分片
+  // };
+
+  try {
+    const result = await client.put(objectKey, file);
+
+    // 返回文件URL
+    if (stsToken.customDomain) {
+      return `https://${stsToken.customDomain}/${objectKey}`;
+    } else {
+      return result.url || `https://${stsToken.bucketName}.${stsToken.endpoint}/${objectKey}`;
+    }
+  } catch (error) {
+    console.error('上传文件失败:', error);
+    throw new Error(`上传文件失败: ${error}`);
+  }
+}
+
+// 批量上传文件到OSS
+export async function uploadFilesToOSS(
+  files: File[],
+  onProgress?: UploadProgressCallback
+): Promise<string[]> {
+  const uploadPromises = files.map(file => uploadFileToOSS(file, onProgress));
+  return Promise.all(uploadPromises);
+}
+
+// 判断文件是否为图像文件
+export function isImageFile(file: File): boolean {
+  const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+  return imageTypes.includes(file.type);
+}
+
+// 判断文件是否为代码文件
+export function isCodeFile(file: File): boolean {
+  const codeExtensions = ['js', 'jsx', 'ts', 'tsx', 'py', 'java', 'go', 'rs', 'cpp', 'c', 'h', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'md', 'txt'];
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  return codeExtensions.includes(ext);
 }

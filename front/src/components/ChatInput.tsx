@@ -1,8 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Brain,
+  CheckCircle,
   ChevronDown,
   File,
+  Image as ImageIcon,
   Loader2,
   MessageCircle,
   Radio,
@@ -261,15 +263,66 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             {stagedFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 rounded-lg text-sm"
+                className={`relative group ${
+                  file.type === 'image' 
+                    ? 'w-20 h-20 rounded-lg overflow-hidden border-2' 
+                    : 'flex items-center gap-2 px-3 py-1.5 rounded-lg'
+                } ${
+                  file.uploadStatus === 'uploading' 
+                    ? 'border-yellow-500/50 bg-yellow-500/10' 
+                    : file.uploadStatus === 'success' 
+                    ? 'border-green-500/50 bg-green-500/10' 
+                    : file.uploadStatus === 'error' 
+                    ? 'border-red-500/50 bg-red-500/10' 
+                    : 'bg-blue-600/20 border-blue-500/30'
+                }`}
               >
-                <File size={14} className="text-blue-400"/>
-                <span className="text-blue-200">{file.name}</span>
+                {file.type === 'image' ? (
+                  <>
+                    <img
+                      src={file.previewUrl || file.imageUrl}
+                      alt={file.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {file.uploadStatus === 'uploading' && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <Loader2 size={16} className="text-white animate-spin"/>
+                      </div>
+                    )}
+                    {file.uploadStatus === 'success' && (
+                      <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                        <CheckCircle size={12} className="text-white"/>
+                      </div>
+                    )}
+                    {file.uploadStatus === 'error' && (
+                      <div className="absolute top-1 right-1 bg-red-500 rounded-full p-0.5">
+                        <X size={12} className="text-white"/>
+                      </div>
+                    )}
+                    {file.uploadProgress !== undefined && file.uploadProgress > 0 && file.uploadProgress < 100 && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
+                        <div 
+                          className="h-full bg-blue-500 transition-all" 
+                          style={{width: `${file.uploadProgress}%`}}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <File size={14} className="text-blue-400"/>
+                    <span className="text-blue-200">{file.name}</span>
+                  </>
+                )}
                 <button
                   onClick={() => onRemoveStagedFile(file.id)}
-                  className="p-0.5 hover:bg-blue-500/30 rounded transition-colors"
+                  className={`absolute ${
+                    file.type === 'image' 
+                      ? 'top-1 left-1 bg-red-500/80 hover:bg-red-500 rounded-full p-0.5' 
+                      : 'p-0.5 hover:bg-blue-500/30 rounded'
+                  } transition-colors`}
                 >
-                  <X size={14} className="text-blue-300 hover:text-white"/>
+                  <X size={14} className="text-white"/>
                 </button>
               </div>
             ))}
@@ -516,7 +569,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           ref={fileInputRef}
           onChange={handleFileChange}
           multiple
-          accept=".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql"
+          accept=".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.ico"
           className="hidden"
         />
 

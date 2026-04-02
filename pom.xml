@@ -70,20 +70,16 @@
             <version>1.15</version>
         </dependency>
         <dependency>
-            <groupId>com.larksuite.oapi</groupId>
-            <artifactId>oapi-sdk</artifactId>
-            <version>2.0.23</version>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
         </dependency>
+        <!-- 阿里云STS SDK（用于生成临时访问凭证） -->
+        <!-- Source: https://mvnrepository.com/artifact/com.aliyun/sts20150401 -->
         <dependency>
-            <artifactId>oapi-sdk-servlet-ext</artifactId>
-            <groupId>com.larksuite.oapi</groupId>
-            <version>1.0.0-rc3</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>oapi-sdk</artifactId>
-                    <groupId>com.larksuite.oapi</groupId>
-                </exclusion>
-            </exclusions>
+            <groupId>com.aliyun</groupId>
+            <artifactId>sts20150401</artifactId>
+            <version>1.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>

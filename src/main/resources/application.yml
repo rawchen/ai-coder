@@ -13,3 +13,21 @@ spring:
     url: jdbc:mysql://localhost:3306/ai_coder?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&useSSL=false
     username: root
     password: root
+
+# 阿里云OSS配置（使用STS临时凭证方案）
+aliyun:
+  oss:
+    # 主账号AccessKey（仅后端使用，用于生成临时凭证）
+    accessKeyId: xxx
+    accessKeySecret: xxx
+    # RAM角色的ARN（需要在阿里云RAM中创建角色并获取）
+    roleArn: acs:ram::xxx:role/xxx
+    # OSS配置
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    bucketName: xxx
+    # 自定义域名（可选，如果有CDN域名）
+    customDomain:
+    # STS临时凭证有效期（秒），最小900，最大3600
+    stsExpiration: 3600
+    # 上传目录
+    uploadFolder: temp
