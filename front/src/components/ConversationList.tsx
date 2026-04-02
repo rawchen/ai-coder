@@ -27,6 +27,20 @@ export function ConversationList({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const LOAD_MORE_THRESHOLD = 200; // 距离底部多少像素时触发加载
 
+  // 提取消息文本内容
+  const getMessageText = (msg: any): string => {
+    if (typeof msg.content === 'string') {
+      return msg.content;
+    }
+    if (Array.isArray(msg.content)) {
+      return msg.content
+        .filter((item: any) => item.type === 'text')
+        .map((item: any) => item.text || '')
+        .join(' ');
+    }
+    return '';
+  };
+
   // 搜索过滤对话
   const filteredConversations = conversations.filter(conv => {
     if (!searchQuery.trim()) return true;
@@ -37,7 +51,7 @@ export function ConversationList({
     if (conv.title.toLowerCase().includes(query)) return true;
 
     // 搜索消息内容
-    if (conv.messages.some(msg => msg.content.toLowerCase().includes(query))) return true;
+    if (conv.messages.some(msg => getMessageText(msg).toLowerCase().includes(query))) return true;
 
     return false;
   });
@@ -108,7 +122,7 @@ export function ConversationList({
   const getMatchCount = (conv: Conversation): number => {
     if (!searchQuery.trim()) return 0;
     const query = searchQuery.toLowerCase();
-    return conv.messages.filter(msg => msg.content.toLowerCase().includes(query)).length;
+    return conv.messages.filter(msg => getMessageText(msg).toLowerCase().includes(query)).length;
   };
 
   // 处理新建对话

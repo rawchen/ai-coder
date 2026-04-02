@@ -42,6 +42,7 @@ import {
   GitCompare,
   Github,
   Image as ImageIcon,
+  Menu,
   MessageSquare,
   Moon,
   PanelLeftClose,
@@ -165,10 +166,12 @@ function App() {
     return savedTheme ? savedTheme === 'dark' : true;
   });
   // 使用函数式初始化，根据设备类型设置初始状态
+  const [deviceType, setDeviceType] = useState<DeviceType>(() => getDeviceType());
   const [leftPanelOpen, setLeftPanelOpen] = useState(() => getDefaultPanelStates().leftOpen);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(() => getDefaultPanelStates().rightOpen);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('files');
   const [diffViewMode, setDiffViewMode] = useState<'split' | 'unified'>('unified');
   const [currentDiff, setCurrentDiff] = useState<DiffResult | null>(null);
@@ -264,6 +267,29 @@ function App() {
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  // 监听窗口大小变化，更新设备类型
+  useEffect(() => {
+    const handleResize = () => {
+      const newDeviceType = getDeviceType();
+      setDeviceType(prev => {
+        if (prev !== newDeviceType) {
+          // 设备类型改变时，更新面板状态
+          const defaultStates = getDefaultPanelStates();
+          setLeftPanelOpen(defaultStates.leftOpen);
+          setRightPanelOpen(defaultStates.rightOpen);
+          // 如果从移动端切换到其他设备，关闭移动菜单
+          if (prev === 'mobile' && newDeviceType !== 'mobile') {
+            setMobileMenuOpen(false);
+          }
+        }
+        return newDeviceType;
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 页面加载完成后聚焦输入框，并滚动到底部
   useEffect(() => {
@@ -422,6 +448,10 @@ function App() {
       setCurrentConversationId(draftConversation.id);
       // 聚焦输入框
       setTimeout(() => chatInputRef.current?.focus(), 0);
+      // 移动端时关闭菜单
+      if (deviceType === 'mobile') {
+        setMobileMenuOpen(false);
+      }
       return;
     }
 
@@ -438,7 +468,20 @@ function App() {
     setCurrentConversationId(newConversation.id);
     // 聚焦输入框
     setTimeout(() => chatInputRef.current?.focus(), 0);
-  }, [draftConversation, model]);
+    // 移动端时关闭菜单
+    if (deviceType === 'mobile') {
+      setMobileMenuOpen(false);
+    }
+  }, [draftConversation, model, deviceType]);
+
+  // 选择会话（移动端时关闭菜单）
+  const handleSelectConversation = useCallback((id: string) => {
+    setCurrentConversationId(id);
+    // 移动端时关闭菜单
+    if (deviceType === 'mobile') {
+      setMobileMenuOpen(false);
+    }
+  }, [deviceType]);
 
   // 删除对话
   const deleteConversation = useCallback((id: string) => {
@@ -458,48 +501,32 @@ function App() {
     // 如果没有内容且没有暂存文件，直接返回
     if (!content.trim() && stagedFiles.length === 0) return;
 
+    // 立即保存暂存文件到本地变量并清空，这样UI会立即隐藏暂存文件显示区域
+    const currentStagedFiles = [...stagedFiles];
+    setStagedFiles([]);
+
     // 上传图像文件到OSS
-    const imageFiles = stagedFiles.filter(f => f.type === 'image');
+    const imageFiles = currentStagedFiles.filter(f => f.type === 'image');
     let uploadedImageUrls: string[] = [];
 
     if (imageFiles.length > 0) {
       try {
-        // 更新上传状态
-        setStagedFiles(prev => prev.map(f =>
-          f.type === 'image' ? {...f, uploadStatus: 'uploading', uploadProgress: 0} : f
-        ));
-
         // 逐个上传图像文件
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i];
           try {
-            const fileObj = stagedFiles.find(f => f.id === file.id);
+            const fileObj = currentStagedFiles.find(f => f.id === file.id);
             if (fileObj && fileObj.previewUrl) {
               // 从预览URL创建File对象
               const response = await fetch(fileObj.previewUrl);
               const blob = await response.blob();
               const fileToUpload = new File([blob], file.name, {type: blob.type});
 
-              const url = await uploadFileToOSS(fileToUpload, (fileName, percent) => {
-                // 更新上传进度
-                setStagedFiles(prev => prev.map(f =>
-                  f.id === file.id ? {...f, uploadProgress: percent} : f
-                ));
-              });
-
+              const url = await uploadFileToOSS(fileToUpload);
               uploadedImageUrls.push(url);
-
-              // 更新上传成功状态
-              setStagedFiles(prev => prev.map(f =>
-                f.id === file.id ? {...f, uploadStatus: 'success', imageUrl: url} : f
-              ));
             }
           } catch (error) {
             console.error(`上传文件 ${file.name} 失败:`, error);
-            // 更新上传失败状态
-            setStagedFiles(prev => prev.map(f =>
-              f.id === file.id ? {...f, uploadStatus: 'error'} : f
-            ));
           }
         }
       } catch (error) {
@@ -509,7 +536,7 @@ function App() {
 
     // 构建消息内容
     let messageContent: string | MessageContent[];
-    const codeFiles = stagedFiles.filter(f => f.type === 'code');
+    const codeFiles = currentStagedFiles.filter(f => f.type === 'code');
 
     if (uploadedImageUrls.length > 0) {
       // 有图像文件，使用数组格式
@@ -634,12 +661,12 @@ function App() {
     console.log('发送的消息历史:', JSON.stringify(messageHistory, null, 2));
 
     // 添加暂存文件到项目文件
-    if (stagedFiles.length > 0) {
-      setProjectFiles(prev => [...prev, ...stagedFiles]);
+    if (currentStagedFiles.length > 0) {
+      setProjectFiles(prev => [...prev, ...currentStagedFiles]);
 
       // 区分图像文件和代码文件
-      const imageFiles = stagedFiles.filter(f => f.type === 'image' && f.imageUrl);
-      const codeFiles = stagedFiles.filter(f => f.type === 'code');
+      const imageFiles = currentStagedFiles.filter(f => f.type === 'image' && f.imageUrl);
+      const codeFiles = currentStagedFiles.filter(f => f.type === 'code');
 
       // 构建文件上下文
       let filesContext = '';
@@ -661,8 +688,8 @@ function App() {
     }
 
     // 添加项目文件上下文（排除刚添加的暂存文件）
-    const allProjectFiles = [...projectFiles, ...stagedFiles];
-    if (allProjectFiles.length > stagedFiles.length && responseMode === 'code') {
+    const allProjectFiles = [...projectFiles, ...currentStagedFiles];
+    if (allProjectFiles.length > currentStagedFiles.length && responseMode === 'code') {
       const filesContext = projectFiles.map(f => `文件: ${f.name}\n\`\`\`${f.language}\n${f.content}\n\`\`\``).join('\n\n');
       messageHistory.unshift({
         role: 'system',
@@ -911,13 +938,12 @@ function App() {
       setTimeout(() => {
         setShowCompleteAnimation(false);
       }, 3000);
-      // 清空暂存文件，释放图像预览URL
-      stagedFiles.forEach(file => {
+      // 释放图像预览URL
+      currentStagedFiles.forEach(file => {
         if (file.type === 'image' && file.previewUrl) {
           URL.revokeObjectURL(file.previewUrl);
         }
       });
-      setStagedFiles([]);
       // 如果是草稿对话，清空草稿
       if (isDraft) {
         setDraftConversation(null);
@@ -1201,10 +1227,26 @@ function App() {
   return (
     <div
       className={`h-[100dvh] flex overflow-hidden ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+      {/* 移动端遮罩层 */}
+      {deviceType === 'mobile' && mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* 左侧边栏 - 对话列表 */}
       <div
-        className={`overflow-hidden flex flex-col flex-shrink-0 mt-2 rounded-tr-[20px] transition-all duration-300 ease-in-out ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-        style={{width: leftPanelOpen ? (leftPanelCollapsed ? '' : `${leftWidth}px`) : '0px'}}
+        className={`overflow-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out bg-gray-800 ${
+          deviceType === 'mobile'
+            ? `fixed left-0 top-0 h-full z-50 rounded-tr-[20px] ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`
+            : 'mt-2 rounded-tr-[20px]'
+        } ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+        style={{
+          width: deviceType === 'mobile'
+            ? (mobileMenuOpen ? `${leftWidth}px` : '0px')
+            : (leftPanelOpen ? (leftPanelCollapsed ? '' : `${leftWidth}px`) : '0px')
+        }}
       >
         {/* Logo区域 */}
         <div className="h-14 flex items-center justify-between px-3 pt-2">
@@ -1238,7 +1280,7 @@ function App() {
                 e.stopPropagation();
                 setLeftPanelCollapsed(true);
               }}
-              className={`p-1.5 rounded transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+              className={`p-1.5 rounded transition-colors ${deviceType === 'mobile' ? 'hidden' : ''} ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
               title="收起侧边栏"
             >
               <PanelLeftClose size={18}/>
@@ -1270,7 +1312,7 @@ function App() {
           <ConversationList
             conversations={conversations}
             currentId={currentConversationId}
-            onSelect={setCurrentConversationId}
+            onSelect={handleSelectConversation}
             onNew={createNewConversation}
             onDelete={deleteConversation}
             isDark={isDark}
@@ -1279,7 +1321,7 @@ function App() {
       </div>
 
       {/* 左侧分隔条 */}
-      {leftPanelOpen && !leftPanelCollapsed && (
+      {deviceType !== 'mobile' && leftPanelOpen && !leftPanelCollapsed && (
         <div
           ref={leftResizerRef}
           className={`px-0 cursor-col-resize hover:bg-transparent transition-colors flex-shrink-0 ${isDark ? 'bg-transparent' : 'bg-gray-200'}`}
@@ -1288,6 +1330,25 @@ function App() {
 
       {/* 中间区域 - 聊天 */}
       <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* 移动端Header */}
+        {deviceType === 'mobile' && (
+          <div
+            className={`flex items-center justify-between px-4 py-2 border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+              title="菜单"
+            >
+              <Menu size={20}/>
+            </button>
+            <h1 className={`text-base max-w-[200px] truncate ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+              {currentConversation?.title || 'AiCoder'}
+            </h1>
+            <div className="w-9"/>
+            {/* 占位符，保持标题居中 */}
+          </div>
+        )}
+
         {/* 聊天消息区 */}
         <div ref={chatContainerRef} className="flex-1 overflow-y-auto pb-32">
           {currentConversation?.messages.map(message => (
@@ -1379,7 +1440,7 @@ function App() {
       </div>
 
       {/* 右侧分隔条 */}
-      {rightPanelOpen && !rightPanelCollapsed && (
+      {deviceType !== 'mobile' && rightPanelOpen && !rightPanelCollapsed && (
         <div
           ref={rightResizerRef}
           className={`px-0 cursor-col-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
@@ -1387,189 +1448,191 @@ function App() {
       )}
 
       {/* 右侧边栏 - 文件和差异 */}
-      <div
-        className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-        style={{width: rightPanelOpen ? (rightPanelCollapsed ? '64px' : `${rightWidth}px`) : '0px'}}
-      >
-        {/* 收起状态：只显示图标 */}
-        {rightPanelCollapsed && (
-          <div className="flex flex-col items-center gap-4 py-2">
-            <div
-              className={`flex p-2 rounded-lg items-center justify-center flex-shrink-0 cursor-pointer group relative text-gray-300 ${isDark ? 'hover:text-white hover:bg-gray-700' : 'hover:bg-gray-200'}`}
-              onClick={() => setRightPanelCollapsed(false)}
-            >
-              <PanelRightClose size={20}
-                               className=" rounded-lg opacity-100 transition-opacity rotate-180"/>
-              {/*<PanelRightClose size={20}*/}
-              {/*                 className="absolute text-white opacity-0 group-hover:opacity-100 transition-opacity rotate-180"/>*/}
-            </div>
-            <button
-              onClick={() => setRightPanelTab('files')}
-              className={`p-2 rounded-lg transition-colors ${rightPanelTab === 'files' ? 'bg-blue-500/20 text-blue-400' : (isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200')}`}
-              title="文件"
-            >
-              <FolderOpen size={20}/>
-            </button>
-            <button
-              onClick={() => setRightPanelTab('diff')}
-              className={`p-2 rounded-lg transition-colors ${rightPanelTab === 'diff' ? 'bg-blue-500/20 text-blue-400' : (isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200')}`}
-              title="差异"
-            >
-              <GitCompare size={20}/>
-            </button>
-            <button
-              onClick={handleExportImage}
-              className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-              title="导出为图片"
-            >
-              <ImageIcon size={20}/>
-            </button>
-            <button
-              onClick={handleExportPdf}
-              className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-              title="导出 PDF"
-            >
-              <FileText size={20}/>
-            </button>
-            <button
-              onClick={handleToggleTheme}
-              className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-              title={isDark ? "切换到白天模式" : "切换到夜间模式"}
-            >
-              {isDark ? <Sun size={20}/> : <Moon size={20}/>}
-            </button>
-            <a
-              href="https://github.com/rawchen/ai-coder"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-              title="GitHub"
-            >
-              <Github size={20}/>
-            </a>
-          </div>
-        )}
-
-        {/* 展开状态：显示完整内容 */}
-        {!rightPanelCollapsed && (
-          <>
-            {/* 功能按钮区 */}
-            <div
-              className={`flex items-center gap-2 px-3 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRightPanelCollapsed(true);
-                }}
-                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                title="收起侧边栏"
+      {deviceType !== 'mobile' && (
+        <div
+          className={`${rightPanelOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'} border-l flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+          style={{width: rightPanelOpen ? (rightPanelCollapsed ? '64px' : `${rightWidth}px`) : '0px'}}
+        >
+          {/* 收起状态：只显示图标 */}
+          {rightPanelCollapsed && (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div
+                className={`flex p-2 rounded-lg items-center justify-center flex-shrink-0 cursor-pointer group relative text-gray-300 ${isDark ? 'hover:text-white hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                onClick={() => setRightPanelCollapsed(false)}
               >
-                <PanelRightClose size={18}/>
+                <PanelRightClose size={20}
+                                 className=" rounded-lg opacity-100 transition-opacity rotate-180"/>
+                {/*<PanelRightClose size={20}*/}
+                {/*                 className="absolute text-white opacity-0 group-hover:opacity-100 transition-opacity rotate-180"/>*/}
+              </div>
+              <button
+                onClick={() => setRightPanelTab('files')}
+                className={`p-2 rounded-lg transition-colors ${rightPanelTab === 'files' ? 'bg-blue-500/20 text-blue-400' : (isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200')}`}
+                title="文件"
+              >
+                <FolderOpen size={20}/>
+              </button>
+              <button
+                onClick={() => setRightPanelTab('diff')}
+                className={`p-2 rounded-lg transition-colors ${rightPanelTab === 'diff' ? 'bg-blue-500/20 text-blue-400' : (isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200')}`}
+                title="差异"
+              >
+                <GitCompare size={20}/>
               </button>
               <button
                 onClick={handleExportImage}
-                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                 title="导出为图片"
               >
-                <ImageIcon size={14}/>
-                <span>图片</span>
+                <ImageIcon size={20}/>
               </button>
-
               <button
                 onClick={handleExportPdf}
-                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                 title="导出 PDF"
               >
-                <FileText size={14}/>
-                <span>PDF</span>
+                <FileText size={20}/>
               </button>
-
               <button
                 onClick={handleToggleTheme}
-                className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                 title={isDark ? "切换到白天模式" : "切换到夜间模式"}
               >
-                {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+                {isDark ? <Sun size={20}/> : <Moon size={20}/>}
               </button>
-
-              <div className={`flex-1`}/>
-
               <a
                 href="https://github.com/rawchen/ai-coder"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                 title="GitHub"
               >
-                <Github size={16}/>
+                <Github size={20}/>
               </a>
             </div>
+          )}
 
-            {/* 标签页 */}
-            <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <button
-                onClick={() => setRightPanelTab('files')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
-                  rightPanelTab === 'files'
-                    ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
-                    : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
-                }`}
-              >
-                <FolderOpen size={16}/>
-                文件
-              </button>
-              <button
-                onClick={() => setRightPanelTab('diff')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
-                  rightPanelTab === 'diff'
-                    ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
-                    : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
-                }`}
-              >
-                <GitCompare size={16}/>
-                差异
-              </button>
-            </div>
+          {/* 展开状态：显示完整内容 */}
+          {!rightPanelCollapsed && (
+            <>
+              {/* 功能按钮区 */}
+              <div
+                className={`flex items-center gap-2 px-3 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRightPanelCollapsed(true);
+                  }}
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  title="收起侧边栏"
+                >
+                  <PanelRightClose size={18}/>
+                </button>
+                <button
+                  onClick={handleExportImage}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  title="导出为图片"
+                >
+                  <ImageIcon size={14}/>
+                  <span>图片</span>
+                </button>
 
-            {/* 内容区 */}
-            <div className="flex-1 overflow-y-auto">
-              {rightPanelTab === 'files' ? (
-                <FileExplorer
-                  files={projectFiles}
-                  selectedFile={selectedFile}
-                  onSelectFile={setSelectedFile}
-                  onDeleteFile={deleteFile}
-                  onRestoreHistory={restoreHistory}
-                  isDark={isDark}
-                  onJumpToAnchor={jumpToAnchor}
-                />
-              ) : (
-                <div className="p-3">
-                  {/* 差异视图切换按钮 */}
-                  <div className="flex items-center justify-end mb-3">
-                    <button
-                      onClick={() => setDiffViewMode(prev => prev === 'split' ? 'unified' : 'split')}
-                      className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                    >
-                      <GitCompare size={14}/>
-                      {diffViewMode === 'split' ? '分栏视图' : '统一视图'}
-                    </button>
-                  </div>
-                  {currentDiff ? (
-                    <DiffViewer diff={currentDiff} viewMode={diffViewMode} isDark={isDark}/>
-                  ) : (
-                    <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      <GitCompare size={40} className="mx-auto mb-2 opacity-50"/>
-                      <p className="text-sm">暂无差异对比</p>
-                      <p className="text-xs mt-1">应用代码修改后将显示差异</p>
+                <button
+                  onClick={handleExportPdf}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  title="导出 PDF"
+                >
+                  <FileText size={14}/>
+                  <span>PDF</span>
+                </button>
+
+                <button
+                  onClick={handleToggleTheme}
+                  className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  title={isDark ? "切换到白天模式" : "切换到夜间模式"}
+                >
+                  {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+                </button>
+
+                <div className={`flex-1`}/>
+
+                <a
+                  href="https://github.com/rawchen/ai-coder"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  title="GitHub"
+                >
+                  <Github size={16}/>
+                </a>
+              </div>
+
+              {/* 标签页 */}
+              <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <button
+                  onClick={() => setRightPanelTab('files')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
+                    rightPanelTab === 'files'
+                      ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                      : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
+                  }`}
+                >
+                  <FolderOpen size={16}/>
+                  文件
+                </button>
+                <button
+                  onClick={() => setRightPanelTab('diff')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors ${
+                    rightPanelTab === 'diff'
+                      ? `${isDark ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800' : 'text-blue-600 border-b-2 border-blue-600 bg-gray-100'}`
+                      : `${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
+                  }`}
+                >
+                  <GitCompare size={16}/>
+                  差异
+                </button>
+              </div>
+
+              {/* 内容区 */}
+              <div className="flex-1 overflow-y-auto">
+                {rightPanelTab === 'files' ? (
+                  <FileExplorer
+                    files={projectFiles}
+                    selectedFile={selectedFile}
+                    onSelectFile={setSelectedFile}
+                    onDeleteFile={deleteFile}
+                    onRestoreHistory={restoreHistory}
+                    isDark={isDark}
+                    onJumpToAnchor={jumpToAnchor}
+                  />
+                ) : (
+                  <div className="p-3">
+                    {/* 差异视图切换按钮 */}
+                    <div className="flex items-center justify-end mb-3">
+                      <button
+                        onClick={() => setDiffViewMode(prev => prev === 'split' ? 'unified' : 'split')}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                      >
+                        <GitCompare size={14}/>
+                        {diffViewMode === 'split' ? '分栏视图' : '统一视图'}
+                      </button>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+                    {currentDiff ? (
+                      <DiffViewer diff={currentDiff} viewMode={diffViewMode} isDark={isDark}/>
+                    ) : (
+                      <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <GitCompare size={40} className="mx-auto mb-2 opacity-50"/>
+                        <p className="text-sm">暂无差异对比</p>
+                        <p className="text-xs mt-1">应用代码修改后将显示差异</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
 
   );

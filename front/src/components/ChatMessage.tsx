@@ -129,8 +129,8 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
                       <img
                         src={item.image_url?.url}
                         alt="上传的图片"
-                        className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600"
-                        style={{maxHeight: '400px'}}
+                        className="w-20 h-auto rounded-lg"
+                        style={{maxHeight: '200px'}}
                       />
                     </div>
                   ) : null

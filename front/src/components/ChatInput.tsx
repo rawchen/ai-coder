@@ -4,14 +4,13 @@ import {
   CheckCircle,
   ChevronDown,
   File,
-  Image as ImageIcon,
+  Link,
   Loader2,
   MessageCircle,
   Radio,
   Send,
   Settings,
   Sparkles,
-  Upload,
   X
 } from 'lucide-react';
 import { ModelType, ProjectFile, ResponseMode, SimpleQAMode, StreamMode, StyleOptions } from '../types';
@@ -123,7 +122,38 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileUpload(e.target.files);
+      // 非GPT模型时过滤图片文件
+      if (model !== 'gpt') {
+        const files = Array.from(e.target.files);
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+        const imageFiles: File[] = [];
+        const otherFiles: File[] = [];
+
+        files.forEach(file => {
+          const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+          if (imageExtensions.includes(ext)) {
+            imageFiles.push(file);
+          } else {
+            otherFiles.push(file);
+          }
+        });
+
+        // 如果有图片文件被过滤，显示提示
+        if (imageFiles.length > 0) {
+          alert(`图片分析仅支持 GPT 模型，已自动过滤 ${imageFiles.length} 个图片文件`);
+        }
+
+        // 只上传非图片文件
+        if (otherFiles.length > 0) {
+          const dataTransfer = new DataTransfer();
+          otherFiles.forEach(file => dataTransfer.items.add(file));
+          onFileUpload(dataTransfer.files);
+        }
+      } else {
+        onFileUpload(e.target.files);
+      }
+      // 重置 input 值，允许重复选择相同文件
+      e.target.value = '';
     }
   };
 
@@ -247,34 +277,33 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {/* 暂存的文件显示 */}
       {stagedFiles.length > 0 && (
         <div className="mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <span
-              className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>已选择 {stagedFiles.length} 个文件</span>
-            <button
-              onClick={handleSendWithFiles}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white text-xs rounded-lg transition-colors"
-            >
-              <Send size={12}/>
-              发送分析
-            </button>
-          </div>
+          {/*<div className="flex items-center justify-between mb-2">*/}
+          {/*  /!*<span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>已选择 {stagedFiles.length} 个文件</span>*!/*/}
+          {/*  /!*<button*!/*/}
+          {/*  /!*  onClick={handleSendWithFiles}*!/*/}
+          {/*  /!*  disabled={isLoading}*!/*/}
+          {/*  /!*  className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white text-xs rounded-lg transition-colors"*!/*/}
+          {/*  /!*>*!/*/}
+          {/*  /!*  <Send size={12}/>*!/*/}
+          {/*  /!*  发送分析*!/*/}
+          {/*  /!*</button>*!/*/}
+          {/*</div>*/}
           <div className="flex flex-wrap gap-2">
             {stagedFiles.map((file) => (
               <div
                 key={file.id}
                 className={`relative group ${
-                  file.type === 'image' 
-                    ? 'w-20 h-20 rounded-lg overflow-hidden border-2' 
+                  file.type === 'image'
+                    ? 'w-20 h-20 rounded-lg overflow-hidden border-2'
                     : 'flex items-center gap-2 px-3 py-1.5 rounded-lg'
                 } ${
-                  file.uploadStatus === 'uploading' 
-                    ? 'border-yellow-500/50 bg-yellow-500/10' 
-                    : file.uploadStatus === 'success' 
-                    ? 'border-green-500/50 bg-green-500/10' 
-                    : file.uploadStatus === 'error' 
-                    ? 'border-red-500/50 bg-red-500/10' 
-                    : 'bg-blue-600/20 border-blue-500/30'
+                  file.uploadStatus === 'uploading'
+                    ? 'border-yellow-500/50 bg-yellow-500/10'
+                    : file.uploadStatus === 'success'
+                      ? 'border-green-500/50 bg-green-500/10'
+                      : file.uploadStatus === 'error'
+                        ? 'border-red-500/50 bg-red-500/10'
+                        : 'bg-blue-600/20 border-blue-500/30'
                 }`}
               >
                 {file.type === 'image' ? (
@@ -301,8 +330,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                     )}
                     {file.uploadProgress !== undefined && file.uploadProgress > 0 && file.uploadProgress < 100 && (
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
-                        <div 
-                          className="h-full bg-blue-500 transition-all" 
+                        <div
+                          className="h-full bg-blue-500 transition-all"
                           style={{width: `${file.uploadProgress}%`}}
                         />
                       </div>
@@ -317,8 +346,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 <button
                   onClick={() => onRemoveStagedFile(file.id)}
                   className={`absolute ${
-                    file.type === 'image' 
-                      ? 'top-1 left-1 bg-red-500/80 hover:bg-red-500 rounded-full p-0.5' 
+                    file.type === 'image'
+                      ? 'top-1 left-1 bg-red-500/80 hover:bg-red-500 rounded-full p-0.5'
                       : 'p-0.5 hover:bg-blue-500/30 rounded'
                   } transition-colors`}
                 >
@@ -529,6 +558,13 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
           <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`p-1.5 rounded-lg transition-colors text-blue-400 ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}
+            title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
+          >
+            <Link size={16}/>
+          </button>
+          <button
             ref={suggestionsButtonRef}
             onClick={() => setShowSuggestions(!showSuggestions)}
             className={`p-1.5 rounded-lg transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200'}`}`}
@@ -569,17 +605,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           ref={fileInputRef}
           onChange={handleFileChange}
           multiple
-          accept=".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.ico"
+          accept={model === 'gpt' 
+            ? ".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.ico"
+            : ".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql"
+          }
           className="hidden"
         />
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600' : 'text-gray-700 hover:text-gray-900 bg-gray-200 hover:bg-gray-300'}`}
-        >
-          <Upload size={16}/>
-          上传文件
-        </button>
       </div>
 
       {/* 输入框 */}
