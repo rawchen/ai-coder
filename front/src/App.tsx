@@ -1142,7 +1142,11 @@ function App() {
   const getExtensionFromLanguage = (lang: string): string => {
     const map: { [key: string]: string } = {
       javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
-      go: 'go', rust: 'rs', html: 'html', css: 'css', json: 'json', sql: 'sql'
+      go: 'go', rust: 'rs', html: 'html', css: 'css', json: 'json', sql: 'sql',
+      jsx: 'jsx', tsx: 'tsx', markdown: 'md', plaintext: 'txt',
+      bash: 'sh', yaml: 'yaml', yml: 'yaml', xml: 'xml',
+      csharp: 'cs', r: 'r', sh: 'sh', shell: 'sh', shellscript: 'sh',
+      c: 'c', cpp: 'cpp', php: 'php', kotlin: 'kt', swift: 'swift'
     };
     return map[lang] || 'txt';
   };
