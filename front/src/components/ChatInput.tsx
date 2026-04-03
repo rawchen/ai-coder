@@ -508,7 +508,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
-                className={`flex items-center gap-2 text-sm rounded px-3 py-1.5 focus:outline-none ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-50'}`}
+                className={`flex items-center gap-2 text-sm rounded px-3 py-1.5 focus:outline-none ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
               >
                 {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
                 <ChevronDown size={14}/>
@@ -634,7 +634,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         <button
           onClick={handleSubmit}
           disabled={!input.trim() || isLoading}
-          className="flex-shrink-0 self-end w-[48px] h-[48px] flex items-center justify-center bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+          className={`flex-shrink-0 self-end w-[48px] h-[48px] flex items-center justify-center disabled:cursor-not-allowed rounded-xl transition-colors text-white ${isDark ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600' : 'bg-blue-500 hover:bg-blue-400 disabled:bg-gray-400'}`}
         >
           {isLoading ? <Loader2 size={20} className="animate-spin"/> : <Send size={20}/>}
         </button>
