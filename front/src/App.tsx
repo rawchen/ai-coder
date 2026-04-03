@@ -1547,8 +1547,8 @@ function App() {
                   className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="导出为图片"
                 >
-                  <ImageIcon size={14}/>
-                  <span>图片</span>
+                  <ImageIcon size={18}/>
+                  {/*<span>图片</span>*/}
                 </button>
 
                 <button
@@ -1556,8 +1556,8 @@ function App() {
                   className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="导出 PDF"
                 >
-                  <FileText size={14}/>
-                  <span>PDF</span>
+                  <FileText size={18}/>
+                  {/*<span>PDF</span>*/}
                 </button>
 
                 <button
@@ -1565,7 +1565,7 @@ function App() {
                   className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title={isDark ? "切换到白天模式" : "切换到夜间模式"}
                 >
-                  {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+                  {isDark ? <Sun size={18}/> : <Moon size={18}/>}
                 </button>
 
                 <div className={`flex-1`}/>
@@ -1577,7 +1577,7 @@ function App() {
                   className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="GitHub"
                 >
-                  <Github size={16}/>
+                  <Github size={18}/>
                 </a>
               </div>
 
