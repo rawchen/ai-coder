@@ -293,7 +293,7 @@ export const ConversationList = forwardRef<ConversationListRef, ConversationList
 
       {/* 底部信息 */}
       <div
-        className={`p-3 bg-gradient-to-r from-transparent to-transparent bg-top bg-no-repeat bg-[length:calc(100%-2rem)_1px] text-center ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>
+        className={`px-3 pt-3 pb-5 bg-gradient-to-r from-transparent to-transparent bg-top bg-no-repeat bg-[length:calc(100%-2rem)_1px] text-center ${isDark ? 'via-gray-700' : 'via-gray-200'}`}>
         <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
           数据存储在本地浏览器
         </p>
