@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatInput, ChatInputRef, ChatMessage, ConversationList, DiffViewer, FileExplorer } from './components';
+import { ChatInput, ChatInputRef, ChatMessage, ConversationList, ConversationListRef, DiffViewer, FileExplorer } from './components';
 import {
   CodeBlock,
   Conversation,
@@ -186,6 +186,7 @@ function App() {
   const rightResizerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
+  const conversationListRef = useRef<ConversationListRef>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightedElementRef = useRef<HTMLElement | null>(null);
   const {showScrollBottomButton, setShowScrollBottomButton} = useScrollStore();
@@ -1246,23 +1247,24 @@ function App() {
 
       {/* 左侧边栏 - 对话列表 */}
       <div
-        className={`overflow-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out bg-gray-800 ${
+        className={`overflow-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${
           deviceType === 'mobile'
             ? `fixed left-0 top-0 h-full z-50 rounded-tr-[20px] ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`
             : 'mt-2 rounded-tr-[20px]'
-        } ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+        } ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
         style={{
           width: deviceType === 'mobile'
             ? (mobileMenuOpen ? `${leftWidth}px` : '0px')
-            : (leftPanelOpen ? (leftPanelCollapsed ? '' : `${leftWidth}px`) : '0px')
+            : (leftPanelOpen ? (leftPanelCollapsed ? '64px' : `${leftWidth}px`) : '0px')
         }}
       >
         {/* Logo区域 */}
-        <div className="h-14 flex items-center justify-between px-3 pt-2">
+        <div className="h-14 flex items-center justify-between px-3 pt-4">
           <div className="flex items-center gap-3">
             {!leftPanelCollapsed ? (
               <div
-                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                onClick={() => window.location.reload()}
               >
                 <Code2 size={20} className="text-white"/>
               </div>
@@ -1277,7 +1279,7 @@ function App() {
               </div>
             )}
             {!leftPanelCollapsed && (
-              <div className="min-w-0" onClick={() => window.location.reload()}>
+              <div className="min-w-0 cursor-pointer" onClick={() => window.location.reload()}>
                 <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AiCoder</h1>
                 <p className={`text-xs -mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>智能创作平台</p>
               </div>
@@ -1301,13 +1303,20 @@ function App() {
         {leftPanelCollapsed && (
           <div className="flex flex-col items-center gap-4 py-4">
             <button
-              onClick={createNewConversation}
+              onClick={() => {
+                setLeftPanelCollapsed(false);
+                createNewConversation();
+              }}
               className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
               title="新建对话"
             >
               <Plus size={20}/>
             </button>
             <button
+              onClick={() => {
+                setLeftPanelCollapsed(false);
+                setTimeout(() => conversationListRef.current?.focusSearch(), 100);
+              }}
               className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
               title="搜索对话"
             >
@@ -1319,6 +1328,7 @@ function App() {
         {/* 展开状态：显示完整列表 */}
         {!leftPanelCollapsed && (
           <ConversationList
+            ref={conversationListRef}
             conversations={conversations}
             currentId={currentConversationId}
             onSelect={handleSelectConversation}
@@ -1542,8 +1552,8 @@ function App() {
                   className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="导出为图片"
                 >
-                  <ImageIcon size={14}/>
-                  <span>图片</span>
+                  <ImageIcon size={18}/>
+                  {/*<span>图片</span>*/}
                 </button>
 
                 <button
@@ -1551,8 +1561,8 @@ function App() {
                   className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="导出 PDF"
                 >
-                  <FileText size={14}/>
-                  <span>PDF</span>
+                  <FileText size={18}/>
+                  {/*<span>PDF</span>*/}
                 </button>
 
                 <button
@@ -1560,7 +1570,7 @@ function App() {
                   className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title={isDark ? "切换到白天模式" : "切换到夜间模式"}
                 >
-                  {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+                  {isDark ? <Sun size={18}/> : <Moon size={18}/>}
                 </button>
 
                 <div className={`flex-1`}/>
@@ -1572,7 +1582,7 @@ function App() {
                   className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                   title="GitHub"
                 >
-                  <Github size={16}/>
+                  <Github size={18}/>
                 </a>
               </div>
 
