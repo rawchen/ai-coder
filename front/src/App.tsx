@@ -78,6 +78,59 @@ const getDefaultPanelStates = () => {
   return {leftOpen: true, rightOpen: true};
 };
 
+// 解析内容中的代码块，计算 parts 和 codeBlockIndices（与 ChatMessage 中 parseCodeBlocks 逻辑一致）
+function parseContentParts(
+  content: string,
+  parts: { type: 'text' | 'code' }[],
+  codeBlockIndices: number[],
+  isInner: boolean
+): void {
+  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
+  let pos = 0;
+
+  while (pos < content.length) {
+    openRegex.lastIndex = pos;
+    const openMatch = openRegex.exec(content);
+
+    if (!openMatch) {
+      if (pos < content.length) {
+        parts.push({type: 'text'});
+      }
+      break;
+    }
+
+    const backticks = openMatch[1];
+    const lang = openMatch[2] || 'plaintext';
+    const codeStart = openMatch.index + openMatch[0].length;
+
+    if (openMatch.index > pos) {
+      parts.push({type: 'text'});
+    }
+
+    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    const closeMatch = closeRegex.exec(content.slice(codeStart));
+
+    if (closeMatch) {
+      const codeContent = content.slice(codeStart, codeStart + closeMatch.index).trim();
+
+      // 如果是 md/markdown 包裹，递归解析内部内容
+      if ((lang === 'md' || lang === 'markdown') && !isInner) {
+        parseContentParts(codeContent, parts, codeBlockIndices, true);
+      } else {
+        parts.push({type: 'code'});
+        codeBlockIndices.push(parts.length - 1);
+      }
+
+      pos = codeStart + closeMatch.index + closeMatch[0].length;
+    } else {
+      // 未闭合的代码块
+      parts.push({type: 'code'});
+      codeBlockIndices.push(parts.length - 1);
+      break;
+    }
+  }
+}
+
 function App() {
   // 状态
   const [conversations, setConversations] = useState<Conversation[]>(() => {
@@ -793,26 +846,10 @@ function App() {
         const codeBlocks = extractCodeBlocks(response.content);
 
         // 计算每个代码块在contentParts中的实际索引
-        // 通过模拟ChatMessage中的解析逻辑来确定索引
+        // 使用与 ChatMessage 中 parseCodeBlocks 相同的解析逻辑
         const parts: { type: 'text' | 'code' }[] = [];
-        let lastIndex = 0;
-        const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
-        let match: RegExpExecArray | null;
-        let codeBlockCounter = 0;
-        const codeBlockIndices: number[] = []; // 存储每个代码块在parts中的索引
-
-        while ((match = codeBlockRegex.exec(response.content)) !== null) {
-          if (match.index > lastIndex) {
-            parts.push({type: 'text'});
-          }
-          parts.push({type: 'code'});
-          codeBlockIndices.push(parts.length - 1); // 记录代码块的索引
-          lastIndex = match.index + match[0].length;
-          codeBlockCounter++;
-        }
-        if (lastIndex < response.content.length) {
-          parts.push({type: 'text'});
-        }
+        const codeBlockIndices: number[] = [];
+        parseContentParts(response.content, parts, codeBlockIndices, false);
 
         const assistantMessageId = generateId();
         const assistantMessage: Message = {

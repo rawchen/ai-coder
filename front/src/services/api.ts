@@ -324,19 +324,55 @@ export function analyzeProjectFiles(files: File[]): Promise<string> {
 
 // 提取代码块
 export function extractCodeBlocks(content: string): { language: string; code: string; filename?: string }[] {
-  const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+?)\n)?\n?([\s\S]*?)```/g;
   const blocks: { language: string; code: string; filename?: string }[] = [];
-
-  let match;
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    blocks.push({
-      language: match[1] || 'plaintext',
-      filename: match[2]?.trim(),
-      code: match[3].trim()
-    });
-  }
-
+  extractCodeBlocksInner(content, blocks, false);
   return blocks;
+}
+
+function extractCodeBlocksInner(content: string, blocks: { language: string; code: string; filename?: string }[], isInner: boolean): void {
+  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
+  let pos = 0;
+
+  while (pos < content.length) {
+    openRegex.lastIndex = pos;
+    const openMatch = openRegex.exec(content);
+
+    if (!openMatch) break;
+
+    const backticks = openMatch[1];
+    const lang = openMatch[2] || 'plaintext';
+    const filename = openMatch[3]?.trim();
+    const codeStart = openMatch.index + openMatch[0].length;
+
+    // 查找匹配的闭合反引号
+    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    const closeMatch = closeRegex.exec(content.slice(codeStart));
+
+    if (closeMatch) {
+      const codeContent = content.slice(codeStart, codeStart + closeMatch.index).trim();
+
+      // 如果是 md/markdown 包裹，递归解析内部内容
+      if ((lang === 'md' || lang === 'markdown') && !isInner) {
+        extractCodeBlocksInner(codeContent, blocks, true);
+      } else {
+        blocks.push({
+          language: lang,
+          filename,
+          code: codeContent
+        });
+      }
+
+      pos = codeStart + closeMatch.index + closeMatch[0].length;
+    } else {
+      // 未闭合的代码块
+      blocks.push({
+        language: lang,
+        filename,
+        code: content.slice(codeStart).trim()
+      });
+      break;
+    }
+  }
 }
 
 // 智能推测语言

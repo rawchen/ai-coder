@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CodeBlock, Message, MessageContent } from '../types';
 import { CodeBlockView } from './CodeBlockView';
 import { Bot, User } from 'lucide-react';
@@ -7,13 +7,231 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import mermaid from 'mermaid';
-import { useEffect, useRef, useState } from 'react';
+
+// Mermaid 切换开关组件
+const MermaidSwitch = ({showText, onToggle, isDark}: { showText: boolean; onToggle: () => void; isDark: boolean }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div
+      className={`absolute top-3 right-3 z-10 flex rounded-2xl overflow-hidden cursor-pointer select-none ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200'}`}
+      onClick={onToggle}
+    >
+      {/* 滑动背景 */}
+      <div
+        ref={sliderRef}
+        className={`absolute top-0 h-full rounded-2xl transition-transform duration-200 ease-in-out ${isDark ? 'bg-gray-500' : 'bg-gray-400'}`}
+        style={{
+          width: '50%',
+          transform: showText ? 'translateX(100%)' : 'translateX(0)',
+        }}
+      />
+      <div
+        className={`relative z-10 pl-2 pr-2 py-1 text-xs font-medium transition-colors duration-200 ${!showText ? 'text-white' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>
+        图表
+      </div>
+      <div
+        className={`relative z-10 pl-2 pr-2 py-1 text-xs font-medium transition-colors duration-200 ${showText ? 'text-white' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>
+        文本
+      </div>
+    </div>
+  );
+};
+
+// Mermaid 灯箱组件
+const MermaidLightbox = ({svg, isDark, onClose}: { svg: string; isDark: boolean; onClose: () => void }) => {
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({x: 0, y: 0});
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({x: 0, y: 0});
+  const offsetStart = useRef({x: 0, y: 0});
+
+  const handleExportPng = useCallback(() => {
+    const svgEl = lightboxRef.current?.querySelector('svg');
+    if (!svgEl) return;
+
+    // 克隆 SVG，内联样式使 foreignObject 中文字可正常渲染
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    const width = svgEl.getAttribute('width') || svgEl.viewBox?.baseVal?.width?.toString() || '800';
+    const height = svgEl.getAttribute('height') || svgEl.viewBox?.baseVal?.height?.toString() || '600';
+
+    // 确保有明确尺寸
+    if (!clone.getAttribute('width')) clone.setAttribute('width', width);
+    if (!clone.getAttribute('height')) clone.setAttribute('height', height);
+
+    // 收集页面中所有样式表规则，内联到 SVG 的 foreignObject 中
+    const styleRules: string[] = [];
+    for (const sheet of document.styleSheets) {
+      try {
+        for (const rule of sheet.cssRules) {
+          styleRules.push(rule.cssText);
+        }
+      } catch {
+        // 跨域样式表无法读取，跳过
+      }
+    }
+    // 为 foreignObject 内部注入内联样式
+    const inlineStyle = `<style>${styleRules.join('\n')}</style>`;
+    clone.querySelectorAll('foreignObject').forEach(fo => {
+      const body = fo.querySelector('body') || fo.querySelector('div');
+      if (body) {
+        body.insertAdjacentHTML('afterbegin', inlineStyle);
+      } else {
+        fo.insertAdjacentHTML('afterbegin', inlineStyle);
+      }
+    });
+
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(clone);
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr)}`;
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const dpr = 2;
+        canvas.width = img.naturalWidth * dpr;
+        canvas.height = img.naturalHeight * dpr;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.scale(dpr, dpr);
+          ctx.fillStyle = isDark ? '#1f2937' : '#ffffff';
+          ctx.fillRect(0, 0, img.naturalWidth, img.naturalHeight);
+          ctx.drawImage(img, 0, 0);
+        }
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'mermaid-chart.png';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }
+        }, 'image/png');
+      } catch {
+        // canvas 被污染时降级为导出 SVG
+        handleExportSvg();
+      }
+    };
+    img.onerror = () => {
+      // data URL 加载失败时降级为导出 SVG
+      handleExportSvg();
+    };
+    img.src = dataUrl;
+  }, [isDark]);
+
+  const handleExportSvg = useCallback(() => {
+    const svgEl = lightboxRef.current?.querySelector('svg');
+    if (!svgEl) return;
+
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(svgEl);
+    const blob = new Blob([svgStr], {type: 'image/svg+xml;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mermaid-chart.svg';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setScale(prev => Math.min(Math.max(prev + (e.deltaY > 0 ? -0.1 : 0.1), 0.2), 5));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStart.current = {x: e.clientX, y: e.clientY};
+    offsetStart.current = {...offset};
+  }, [offset]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setOffset({
+      x: offsetStart.current.x + (e.clientX - dragStart.current.x),
+      y: offsetStart.current.y + (e.clientY - dragStart.current.y),
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setScale(1);
+    setOffset({x: 0, y: 0});
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{backgroundColor: 'rgba(0,0,0,0.75)'}}
+      onClick={onClose}
+    >
+      {/* 工具栏 */}
+      <div
+        className="absolute top-4 right-4 z-50 flex items-center gap-2"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setScale(s => Math.min(s + 0.2, 5))}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+        >+
+        </button>
+        <span
+          className={`text-sm min-w-[3rem] text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{Math.round(scale * 100)}%</span>
+        <button
+          onClick={() => setScale(s => Math.max(s - 0.2, 0.2))}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+        >−
+        </button>
+        <button
+          onClick={handleReset}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+        >重置
+        </button>
+        <button
+          onClick={handleExportPng}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-green-700 hover:bg-green-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+        >导出 PNG
+        </button>
+        <button
+          onClick={handleExportSvg}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-blue-700 hover:bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+        >导出 SVG
+        </button>
+        <button
+          onClick={onClose}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+        >✕
+        </button>
+      </div>
+
+      {/* 图表区域 */}
+      <div
+        ref={lightboxRef}
+        className="cursor-grab active:cursor-grabbing select-none"
+        style={{transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: 'center center'}}
+        onClick={e => e.stopPropagation()}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        dangerouslySetInnerHTML={{__html: svg}}
+      />
+    </div>
+  );
+};
 
 // Mermaid 渲染组件
-const MermaidBlock = memo(function MermaidBlock({ chart, isDark }: { chart: string; isDark: boolean }) {
+const MermaidBlock = memo(function MermaidBlock({chart, isDark, id}: { chart: string; isDark: boolean; id?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [showText, setShowText] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
 
   useEffect(() => {
     const renderChart = async () => {
@@ -24,7 +242,7 @@ const MermaidBlock = memo(function MermaidBlock({ chart, isDark }: { chart: stri
           securityLevel: 'loose',
         });
         const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
-        const { svg: renderedSvg } = await mermaid.render(id, chart.trim());
+        const {svg: renderedSvg} = await mermaid.render(id, chart.trim());
         setSvg(renderedSvg);
         setError('');
       } catch (err) {
@@ -35,20 +253,48 @@ const MermaidBlock = memo(function MermaidBlock({ chart, isDark }: { chart: stri
     renderChart();
   }, [chart, isDark]);
 
+  if (error && showText) {
+    return (
+      <div id={id} className={`relative rounded-lg overflow-hidden ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+        <MermaidSwitch showText={showText} onToggle={() => setShowText(false)} isDark={isDark}/>
+        <pre className={`p-4 pr-28 text-sm overflow-x-auto ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{chart}</pre>
+      </div>
+    );
+  }
+
   if (error) {
     return (
-      <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
-        {error}
+      <div id={id} className="relative">
+        <MermaidSwitch showText={showText} onToggle={() => setShowText(true)} isDark={isDark}/>
+        <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (showText) {
+    return (
+      <div id={id} className={`relative rounded-lg overflow-hidden ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+        <MermaidSwitch showText={showText} onToggle={() => setShowText(false)} isDark={isDark}/>
+        <pre className={`p-4 pr-28 text-sm overflow-x-auto ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{chart}</pre>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`overflow-x-auto p-4 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    <div id={id} className="relative">
+      <MermaidSwitch showText={showText} onToggle={() => setShowText(true)} isDark={isDark}/>
+      <div
+        ref={containerRef}
+        className={`overflow-x-auto p-4 rounded-lg cursor-pointer hover:ring-2 hover:ring-gray-400/50 transition-all ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}
+        dangerouslySetInnerHTML={{__html: svg}}
+        onClick={() => setShowLightbox(true)}
+      />
+      {showLightbox && svg && (
+        <MermaidLightbox svg={svg} isDark={isDark} onClose={() => setShowLightbox(false)}/>
+      )}
+    </div>
   );
 });
 
@@ -60,72 +306,106 @@ interface ChatMessageProps {
 }
 
 // 解析消息中的代码块（包括未完成的代码块）
-function parseContent(content: string | MessageContent[]) {
+// 支持3个及以上反引号的代码块，以及 md/markdown 包裹中的嵌套代码块
+function parseContent(content: string | MessageContent[]): Array<{
+  type: 'text' | 'code';
+  content: string;
+  language?: string;
+  filename?: string;
+  incomplete?: boolean
+}> {
   // 如果content是数组格式，返回空数组（用户消息直接显示，不需要解析）
   if (Array.isArray(content)) {
     return [];
   }
 
-  const parts: {
+  const result = parseCodeBlocks(content, false);
+  return result.length > 0 ? result : [{type: 'text' as const, content}];
+}
+
+// 使用非贪婪方式匹配任意数量(>=3)反引号的代码块，确保开闭反引号数量一致
+function parseCodeBlocks(content: string, isInner: boolean): Array<{
+  type: 'text' | 'code';
+  content: string;
+  language?: string;
+  filename?: string;
+  incomplete?: boolean
+}> {
+  const parts: Array<{
     type: 'text' | 'code';
     content: string;
     language?: string;
     filename?: string;
     incomplete?: boolean
-  }[] = [];
-  let lastIndex = 0;
+  }> = [];
 
-  // 匹配完整的代码块
-  const codeBlockRegex = /```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*?)```/g;
-  let match: RegExpExecArray | null;
+  let pos = 0;
+  // 匹配3个及以上反引号开头，记录反引号数量，要求闭合时数量一致
+  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    // 添加代码块之前的文本
-    if (match.index > lastIndex) {
-      parts.push({type: 'text', content: content.slice(lastIndex, match.index)});
+  while (pos < content.length) {
+    openRegex.lastIndex = pos;
+    const openMatch = openRegex.exec(content);
+
+    if (!openMatch) {
+      // 没有更多代码块，添加剩余文本
+      if (pos < content.length) {
+        const text = content.slice(pos);
+        if (text) parts.push({type: 'text', content: text});
+      }
+      break;
     }
 
-    // 添加完整的代码块
-    parts.push({
-      type: 'code',
-      language: match[1] || 'plaintext',
-      filename: match[2]?.trim(),
-      content: match[3].trim(),
-      incomplete: false
-    });
+    const backticks = openMatch[1];
+    const lang = openMatch[2] || 'plaintext';
+    const filename = openMatch[3]?.trim();
+    const codeStart = openMatch.index + openMatch[0].length;
 
-    lastIndex = match.index + match[0].length;
-  }
+    // 添加代码块之前的文本
+    if (openMatch.index > pos) {
+      const text = content.slice(pos, openMatch.index);
+      if (text) parts.push({type: 'text', content: text});
+    }
 
-  // 添加剩余文本
-  if (lastIndex < content.length) {
-    const remaining = content.slice(lastIndex);
+    // 查找匹配的闭合反引号（数量与开头一致）
+    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    const closeMatch = closeRegex.exec(content.slice(codeStart));
 
-    // 检查剩余文本是否包含未完成的代码块（只有 ``` 开头没有结尾）
-    const incompleteCodeMatch = remaining.match(/```(\w+)?(?:\s*\/\/\s*(.+))?\n([\s\S]*)$/);
+    if (closeMatch) {
+      // 找到闭合，完整代码块
+      const codeContent = content.slice(codeStart, codeStart + closeMatch.index);
+      const trimmedCode = codeContent.trim();
 
-    if (incompleteCodeMatch) {
-      // 添加代码块前的文本（如果有）
-      const beforeCode = remaining.slice(0, incompleteCodeMatch.index);
-      if (beforeCode) {
-        parts.push({type: 'text', content: beforeCode});
+      // 如果是 md/markdown 包裹，递归解析其内部内容
+      if ((lang === 'md' || lang === 'markdown') && !isInner) {
+        const innerParts = parseCodeBlocks(trimmedCode, true);
+        parts.push(...innerParts);
+      } else {
+        parts.push({
+          type: 'code',
+          language: lang,
+          filename,
+          content: trimmedCode,
+          incomplete: false
+        });
       }
 
-      // 添加未完成的代码块
+      pos = codeStart + closeMatch.index + closeMatch[0].length;
+    } else {
+      // 未找到闭合，可能是流式输出中的未完成代码块
+      const codeContent = content.slice(codeStart).trim();
       parts.push({
         type: 'code',
-        language: incompleteCodeMatch[1] || 'plaintext',
-        filename: incompleteCodeMatch[2]?.trim(),
-        content: incompleteCodeMatch[3].trim(),
-        incomplete: true // 标记为未完成
+        language: lang,
+        filename,
+        content: codeContent,
+        incomplete: true
       });
-    } else {
-      // 纯文本
-      parts.push({type: 'text', content: remaining});
+      break;
     }
   }
 
-  return parts.length > 0 ? parts : [{type: 'text' as const, content}];
+  return parts;
 }
 
 export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCopyCode, isDark}: ChatMessageProps) {
@@ -216,24 +496,24 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
               {contentParts.map((part, index) => (
                 part.type === 'code' ? (
                   (part.language === 'mermaid' && !part.incomplete) ? (
-                    <MermaidBlock key={index} chart={part.content} isDark={isDark} />
+                    <MermaidBlock key={index} chart={part.content} isDark={isDark} id={`${message.id}-${index}`}/>
                   ) : (
                     <CodeBlockView
-                    key={index}
-                    id={`${message.id}-${index}`}
-                    code={part.content}
-                    language={part.language || 'plaintext'}
-                    filename={part.filename}
-                    onCopy={onCopyCode}
-                    onApply={!part.incomplete && onApplyCode ? () => onApplyCode({
-                      id: `${message.id}-${index}`,
-                      code: part.content,
-                      language: part.language || 'plaintext',
-                      filename: part.filename
-                    }) : undefined}
-                    incomplete={part.incomplete}
-                    isDark={isDark}
-                  />
+                      key={index}
+                      id={`${message.id}-${index}`}
+                      code={part.content}
+                      language={part.language || 'plaintext'}
+                      filename={part.filename}
+                      onCopy={onCopyCode}
+                      onApply={!part.incomplete && onApplyCode ? () => onApplyCode({
+                        id: `${message.id}-${index}`,
+                        code: part.content,
+                        language: part.language || 'plaintext',
+                        filename: part.filename
+                      }) : undefined}
+                      incomplete={part.incomplete}
+                      isDark={isDark}
+                    />
                   )
                 ) : (
                   <div key={index} className={`prose prose-sm max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
