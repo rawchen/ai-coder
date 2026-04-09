@@ -46,6 +46,36 @@ const MermaidLightbox = ({svg, isDark, onClose}: { svg: string; isDark: boolean;
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({x: 0, y: 0});
   const offsetStart = useRef({x: 0, y: 0});
+  const initialScaleSet = useRef(false);
+
+  // ESC 退出灯箱
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // 计算初始缩放使图表适应视口
+  useEffect(() => {
+    if (initialScaleSet.current) return;
+    const svgEl = lightboxRef.current?.querySelector('svg');
+    if (!svgEl) return;
+
+    // 强制浏览器重新计算 SVG 尺寸
+    const rect = svgEl.getBoundingClientRect();
+    const svgW = rect.width;
+    const svgH = rect.height;
+    if (svgW <= 0 || svgH <= 0) return;
+
+    const padding = 40;
+    const maxW = window.innerWidth - padding;
+    const maxH = window.innerHeight - padding;
+    const fitScale = Math.min(maxW / svgW, maxH / svgH);
+    setScale(fitScale);
+    initialScaleSet.current = true;
+  }, [svg]);
 
   const handleExportPng = useCallback(() => {
     const svgEl = lightboxRef.current?.querySelector('svg');
@@ -159,9 +189,23 @@ const MermaidLightbox = ({svg, isDark, onClose}: { svg: string; isDark: boolean;
   }, []);
 
   const handleReset = useCallback(() => {
+    const svgEl = lightboxRef.current?.querySelector('svg');
+    if (svgEl) {
+      const rect = svgEl.getBoundingClientRect();
+      const svgW = rect.width / scale;
+      const svgH = rect.height / scale;
+      if (svgW > 0 && svgH > 0) {
+        const padding = 40;
+        const maxW = window.innerWidth - padding;
+        const maxH = window.innerHeight - padding;
+        setScale(Math.min(maxW / svgW, maxH / svgH));
+        setOffset({x: 0, y: 0});
+        return;
+      }
+    }
     setScale(1);
     setOffset({x: 0, y: 0});
-  }, []);
+  }, [scale]);
 
   return (
     <div
@@ -211,7 +255,7 @@ const MermaidLightbox = ({svg, isDark, onClose}: { svg: string; isDark: boolean;
       {/* 图表区域 */}
       <div
         ref={lightboxRef}
-        className="cursor-grab active:cursor-grabbing select-none"
+        className="cursor-grab active:cursor-grabbing select-none overflow-visible"
         style={{transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: 'center center'}}
         onClick={e => e.stopPropagation()}
         onWheel={handleWheel}
@@ -264,7 +308,7 @@ const MermaidBlock = memo(function MermaidBlock({chart, isDark, id}: { chart: st
 
   if (error) {
     return (
-      <div id={id} className="relative">
+      <div id={id} className="relative rounded-lg">
         <MermaidSwitch showText={showText} onToggle={() => setShowText(true)} isDark={isDark}/>
         <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
           {error}
@@ -283,7 +327,7 @@ const MermaidBlock = memo(function MermaidBlock({chart, isDark, id}: { chart: st
   }
 
   return (
-    <div id={id} className="relative">
+    <div id={id} className="relative rounded-lg">
       <MermaidSwitch showText={showText} onToggle={() => setShowText(true)} isDark={isDark}/>
       <div
         ref={containerRef}
