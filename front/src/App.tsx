@@ -1143,10 +1143,15 @@ function App() {
     const map: { [key: string]: string } = {
       javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
       go: 'go', rust: 'rs', html: 'html', css: 'css', json: 'json', sql: 'sql',
-      jsx: 'jsx', tsx: 'tsx', markdown: 'md', plaintext: 'txt',
-      bash: 'sh', yaml: 'yaml', yml: 'yaml', xml: 'xml',
+      js: 'js', jsx: 'jsx', ts: 'ts', tsx: 'tsx', markdown: 'md', plaintext: 'txt',
+      bash: 'sh', yaml: 'yaml', yml: 'yaml', xml: 'xml', vue: 'vue',
       csharp: 'cs', r: 'r', sh: 'sh', shell: 'sh', shellscript: 'sh',
-      c: 'c', cpp: 'cpp', php: 'php', kotlin: 'kt', swift: 'swift'
+      c: 'c', cpp: 'cpp', php: 'php', kotlin: 'kt', swift: 'swift',
+      ruby: 'rb', rb: 'rb', scala: 'scala', dart: 'dart',
+      perl: 'pl', lua: 'lua', powershell: 'ps1', posh: 'ps1', graphql: 'graphql',
+      gql: 'graphql', toml: 'toml', diff: 'diff', scss: 'scss',
+      sass: 'sass', less: 'less', groovy: 'groovy', 'objective-c': 'm', objc: 'm',
+      mysql: 'sql', postgresql: 'sql', ini: 'ini', conf: 'conf', nginx: 'conf'
     };
     return map[lang] || 'txt';
   };

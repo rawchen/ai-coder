@@ -6,6 +6,51 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import mermaid from 'mermaid';
+import { useEffect, useRef, useState } from 'react';
+
+// Mermaid 渲染组件
+const MermaidBlock = memo(function MermaidBlock({ chart, isDark }: { chart: string; isDark: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    const renderChart = async () => {
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: isDark ? 'dark' : 'default',
+          securityLevel: 'loose',
+        });
+        const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
+        const { svg: renderedSvg } = await mermaid.render(id, chart.trim());
+        setSvg(renderedSvg);
+        setError('');
+      } catch (err) {
+        setError('流程图渲染失败');
+        console.error('Mermaid render error:', err);
+      }
+    };
+    renderChart();
+  }, [chart, isDark]);
+
+  if (error) {
+    return (
+      <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`overflow-x-auto p-4 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+});
 
 interface ChatMessageProps {
   message: Message;
@@ -170,7 +215,10 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
 
               {contentParts.map((part, index) => (
                 part.type === 'code' ? (
-                  <CodeBlockView
+                  (part.language === 'mermaid' && !part.incomplete) ? (
+                    <MermaidBlock key={index} chart={part.content} isDark={isDark} />
+                  ) : (
+                    <CodeBlockView
                     key={index}
                     id={`${message.id}-${index}`}
                     code={part.content}
@@ -186,6 +234,7 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
                     incomplete={part.incomplete}
                     isDark={isDark}
                   />
+                  )
                 ) : (
                   <div key={index} className={`prose prose-sm max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
                     <ReactMarkdown
