@@ -330,7 +330,8 @@ export function extractCodeBlocks(content: string): { language: string; code: st
 }
 
 function extractCodeBlocksInner(content: string, blocks: { language: string; code: string; filename?: string }[], isInner: boolean): void {
-  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
+  // 允许代码块前有任意空白缩进
+  const openRegex = /([ \t]*)(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
   let pos = 0;
 
   while (pos < content.length) {
@@ -339,13 +340,15 @@ function extractCodeBlocksInner(content: string, blocks: { language: string; cod
 
     if (!openMatch) break;
 
-    const backticks = openMatch[1];
-    const lang = openMatch[2] || 'plaintext';
-    const filename = openMatch[3]?.trim();
+    const indent = openMatch[1] || '';
+    const backticks = openMatch[2];
+    const lang = openMatch[3] || 'plaintext';
+    const filename = openMatch[4]?.trim();
     const codeStart = openMatch.index + openMatch[0].length;
 
-    // 查找匹配的闭合反引号
-    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    // 查找匹配的闭合反引号（允许前面有相同的缩进或更少）
+    const escapedBackticks = backticks.replace(/`/g, '\\`');
+    const closeRegex = new RegExp(`\\n[ \\t]*${escapedBackticks}(?=\\s*\\n|$)`);
     const closeMatch = closeRegex.exec(content.slice(codeStart));
 
     if (closeMatch) {

@@ -384,8 +384,8 @@ function parseCodeBlocks(content: string, isInner: boolean): Array<{
   }> = [];
 
   let pos = 0;
-  // 匹配3个及以上反引号开头，记录反引号数量，要求闭合时数量一致
-  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
+  // 匹配3个及以上反引号开头，允许前面有空白缩进，记录反引号数量，要求闭合时数量一致
+  const openRegex = /([ \t]*)(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
 
   while (pos < content.length) {
     openRegex.lastIndex = pos;
@@ -400,9 +400,9 @@ function parseCodeBlocks(content: string, isInner: boolean): Array<{
       break;
     }
 
-    const backticks = openMatch[1];
-    const lang = openMatch[2] || 'plaintext';
-    const filename = openMatch[3]?.trim();
+    const backticks = openMatch[2];
+    const lang = openMatch[3] || 'plaintext';
+    const filename = openMatch[4]?.trim();
     const codeStart = openMatch.index + openMatch[0].length;
 
     // 添加代码块之前的文本
@@ -411,8 +411,9 @@ function parseCodeBlocks(content: string, isInner: boolean): Array<{
       if (text) parts.push({type: 'text', content: text});
     }
 
-    // 查找匹配的闭合反引号（数量与开头一致）
-    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    // 查找匹配的闭合反引号（数量与开头一致，允许前面有空白缩进）
+    const escapedBackticks = backticks.replace(/`/g, '\\`');
+    const closeRegex = new RegExp(`\\n[ \\t]*${escapedBackticks}(?=\\s*\\n|$)`);
     const closeMatch = closeRegex.exec(content.slice(codeStart));
 
     if (closeMatch) {
