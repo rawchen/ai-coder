@@ -1,0 +1,6 @@
+#!/bin/sh
+APP_NAME=ai-coder
+
+nohup java -Xmn48m -Xms128m -Xmx128m -Xss256k -jar $APP_NAME.jar >> app.log 2>&1 &
+echo $! > /var/run/$APP_NAME.pid
+echo "$APP_NAME start successed pid is $! "
