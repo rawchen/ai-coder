@@ -36,7 +36,7 @@ ssh -i id_rsa.pem -p 22 root@${SERVER_IP} << EOF
 
 cd ${DEPLOY_PATH};
 
-pkill -9 -f ${JAR_NAME}.jar || true
+pkill -9 -f ${PROJECT_NAME}.jar || true
 
 echo '---------------开始启动项目---------------'
 

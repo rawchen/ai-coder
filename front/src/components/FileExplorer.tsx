@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ProjectFile, FileHistory } from '../types';
-import { FileCode, ChevronRight, ChevronDown, History, Trash2, RotateCcw } from 'lucide-react';
+import { FileHistory, ProjectFile } from '../types';
+import { ChevronDown, ChevronRight, FileCode, History, RotateCcw, Trash2 } from 'lucide-react';
 import { formatDate } from '../services/storage';
 
 interface FileExplorerProps {
@@ -38,15 +38,29 @@ export function FileExplorer({
   const getLanguageColor = (language: string): string => {
     const colors: { [key: string]: string } = {
       javascript: 'text-yellow-400',
-      typescript: 'text-blue-400',
+      typescript: 'text-orange-400',
       python: 'text-green-400',
-      java: 'text-orange-400',
+      java: 'text-blue-400',
       go: 'text-cyan-400',
       rust: 'text-orange-500',
       html: 'text-red-400',
       css: 'text-purple-400',
       json: 'text-yellow-300',
-      sql: 'text-pink-400'
+      sql: 'text-pink-400',
+      c: 'text-blue-500',
+      cpp: 'text-blue-500',
+      sh: 'text-green-400',
+      bash: 'text-green-400',
+      shell: 'text-green-400',
+      php: 'text-purple-400',
+      kotlin: 'text-blue-500',
+      swiftsharp: 'text-blue-500',
+      ruby: 'text-red-400',
+      perl: 'text-red-400',
+      lua: 'text-green-400',
+      yaml: 'text-green-400',
+      toml: 'text-yellow-300',
+      markdown: 'text-yellow-300'
     };
     return colors[language] || 'text-gray-400';
   };
@@ -54,7 +68,7 @@ export function FileExplorer({
   if (files.length === 0) {
     return (
       <div className={`p-4 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-        <FileCode size={40} className="mx-auto mb-2 opacity-50" />
+        <FileCode size={40} className="mx-auto mb-2 opacity-50"/>
         <p className="text-sm">暂无文件</p>
         <p className="text-xs mt-1">上传文件或生成代码后将在此显示</p>
       </div>
@@ -87,13 +101,13 @@ export function FileExplorer({
               className={`p-0.5 rounded ${isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-300'}`}
             >
               {expandedFiles.has(file.id) ? (
-                <ChevronDown size={14} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                <ChevronDown size={14} className={isDark ? 'text-gray-400' : 'text-gray-500'}/>
               ) : (
-                <ChevronRight size={14} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                <ChevronRight size={14} className={isDark ? 'text-gray-400' : 'text-gray-500'}/>
               )}
             </button>
 
-            <FileCode size={14} className={getLanguageColor(file.language)} />
+            <FileCode size={14} className={getLanguageColor(file.language)}/>
 
             <span className={`flex-1 text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{file.name}</span>
 
@@ -106,7 +120,7 @@ export function FileExplorer({
                 className={`p-1 rounded hover:text-blue-400 ${isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-300 text-gray-500'}`}
                 title="查看历史"
               >
-                <History size={12} />
+                <History size={12}/>
               </button>
             )}
 
@@ -118,7 +132,7 @@ export function FileExplorer({
               className={`p-1 rounded hover:text-red-400 ${isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-300 text-gray-500'}`}
               title="删除"
             >
-              <Trash2 size={12} />
+              <Trash2 size={12}/>
             </button>
           </div>
 
@@ -137,8 +151,10 @@ export function FileExplorer({
 
           {/* 历史记录 */}
           {showHistoryFor === file.id && file.history.length > 0 && (
-            <div className={`ml-6 mr-2 mb-2 rounded-lg border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
-              <div className={`px-3 py-2 border-b text-xs font-medium ${isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
+            <div
+              className={`ml-6 mr-2 mb-2 rounded-lg border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
+              <div
+                className={`px-3 py-2 border-b text-xs font-medium ${isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
                 修改历史
               </div>
               <div className="max-h-40 overflow-y-auto">
@@ -148,15 +164,17 @@ export function FileExplorer({
                     className={`flex items-center justify-between px-3 py-2 border-b last:border-0 ${isDark ? 'hover:bg-gray-700/50 border-gray-700/50' : 'hover:bg-gray-200/50 border-gray-200/50'}`}
                   >
                     <div>
-                      <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>{history.description}</div>
-                      <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{formatDate(new Date(history.timestamp))}</div>
+                      <div
+                        className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>{history.description}</div>
+                      <div
+                        className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{formatDate(new Date(history.timestamp))}</div>
                     </div>
                     <button
                       onClick={() => onRestoreHistory(file, history)}
                       className={`p-1 rounded hover:text-green-400 ${isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}
                       title="恢复此版本"
                     >
-                      <RotateCcw size={12} />
+                      <RotateCcw size={12}/>
                     </button>
                   </div>
                 ))}

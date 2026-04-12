@@ -15,6 +15,8 @@ import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-yaml';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
 
 interface CodeBlockViewProps {
   code: string;
@@ -33,7 +35,8 @@ function getPrismLanguage(lang: string): string {
   const mapping: { [key: string]: string } = {
     js: 'javascript', ts: 'typescript', py: 'python',
     jsx: 'javascript', tsx: 'typescript', sh: 'bash',
-    html: 'markup', vue: 'markup', xml: 'markup', yml: 'yaml', yaml: 'yaml'
+    html: 'markup', vue: 'markup', xml: 'markup', yml: 'yaml', yaml: 'yaml',
+    c: 'c', h: 'c', cpp: 'cpp', cxx: 'cpp', hpp: 'cpp', cc: 'cpp'
   };
   return mapping[lang] || lang;
 }
@@ -43,7 +46,8 @@ function getFileExtension(lang: string): string {
   const extensions: { [key: string]: string } = {
     javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
     go: 'go', rust: 'rs', sql: 'sql', bash: 'sh', json: 'json',
-    css: 'css', html: 'html', markup: 'html', vue: 'html', yaml: 'yaml', yml: 'yaml', xml: 'xml'
+    css: 'css', html: 'html', markup: 'html', vue: 'html', yaml: 'yaml', yml: 'yaml', xml: 'xml',
+    c: 'c', cpp: 'cpp'
   };
   return extensions[lang] || 'txt';
 }
