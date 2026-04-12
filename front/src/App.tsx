@@ -85,7 +85,8 @@ function parseContentParts(
   codeBlockIndices: number[],
   isInner: boolean
 ): void {
-  const openRegex = /(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
+  // 允许代码块前有任意空白缩进
+  const openRegex = /([ \t]*)(`{3,})(\w+)?(?:\s*\/\/\s*(.+))?\n/g;
   let pos = 0;
 
   while (pos < content.length) {
@@ -99,15 +100,17 @@ function parseContentParts(
       break;
     }
 
-    const backticks = openMatch[1];
-    const lang = openMatch[2] || 'plaintext';
+    const backticks = openMatch[2];
+    const lang = openMatch[3] || 'plaintext';
     const codeStart = openMatch.index + openMatch[0].length;
 
     if (openMatch.index > pos) {
       parts.push({type: 'text'});
     }
 
-    const closeRegex = new RegExp(`\\n${backticks.replace(/`/g, '\\`')}(?=\\s*\\n|$)`);
+    // 查找匹配的闭合反引号（允许前面有相同的缩进或更少）
+    const escapedBackticks = backticks.replace(/`/g, '\\`');
+    const closeRegex = new RegExp(`\\n[ \\t]*${escapedBackticks}(?=\\s*\\n|$)`);
     const closeMatch = closeRegex.exec(content.slice(codeStart));
 
     if (closeMatch) {
