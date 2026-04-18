@@ -253,7 +253,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   return (
     <div
-      className={`p-4 absolute bottom-0 left-0 right-0 rounded-tl-[25px] rounded-tr-[25px] ml-0 mr-0 md:ml-20 md:mr-20 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+      className={`p-4 absolute bottom-0 left-0 right-0 rounded-tl-[25px] rounded-tr-[25px] ml-0 mr-0 md:ml-20 md:mr-20 ${isDark ? 'border-gray-700 bg-gray-dark-800' : 'border-gray-200 bg-gray-50'}`}>
       {/* 智能推荐 */}
       {showSuggestions && (
         <div ref={suggestionsRef} className="mb-4 grid grid-cols-2 gap-2">

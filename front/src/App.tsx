@@ -1314,9 +1314,9 @@ function App() {
       <div
         className={`overflow-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${
           deviceType === 'mobile'
-            ? `fixed left-0 top-0 h-full z-50 rounded-tr-[20px] ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`
+            ? `fixed left-0 top-0 h-full z-50 rounded-tr-[20px] ${isDark ? 'bg-gray-dark-800' : 'bg-gray-50'}`
             : 'mt-2 rounded-tr-[20px]'
-        } ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
+        } ${isDark ? 'border-gray-700 bg-gray-dark-800' : 'border-gray-200 bg-gray-100'}`}
         style={{
           width: deviceType === 'mobile'
             ? (mobileMenuOpen ? `${leftWidth}px` : '0px')

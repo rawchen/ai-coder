@@ -317,3 +317,7 @@ button {
 .overflow-y-auto {
     scroll-behavior: smooth;
 }
+
+.bg-gray-dark-800 {
+    background-color: #272e3d;
+}
