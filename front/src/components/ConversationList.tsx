@@ -105,7 +105,8 @@ export const ConversationList = forwardRef<ConversationListRef, ConversationList
 
   // 快捷键处理函数
   const handleShortcutKey = useCallback((e: KeyboardEvent) => {
-    if ((e.ctrlKey) && e.key === 'f') {
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+    if ((isMac ? e.ctrlKey : e.metaKey) && e.key === 'f') {
       e.preventDefault();
       searchInputRef.current?.focus();
     }
