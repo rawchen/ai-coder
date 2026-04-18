@@ -484,7 +484,7 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
           )}
         </div>
 
-        <div className={`space-y-3 overflow-visible ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <div className={`space-y-3 overflow-visible ${isDark ? 'text-gray-50' : 'text-gray-800'}`}>
           {/* 用户消息：支持文本和图像 */}
           {isUser ? (
             <div className="space-y-2">
@@ -519,7 +519,7 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
                     {message.thinking_time === 0 ? '思考中...' : `已思考（用时 ${message.thinking_time} 秒）`}
                   </summary>
                   <div className={`px-4 py-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
-                    <div className={`prose prose-sm max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
+                    <div className={`prose max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeKatex]}
@@ -561,7 +561,7 @@ export const ChatMessage = memo(function ChatMessage({message, onApplyCode, onCo
                     />
                   )
                 ) : (
-                  <div key={index} className={`prose prose-sm max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
+                  <div key={index} className={`prose max-w-none break-words ${isDark ? 'prose-invert' : ''}`}>
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}  // 合并 remark 插件
                       rehypePlugins={[rehypeKatex]}            // rehype 插件
