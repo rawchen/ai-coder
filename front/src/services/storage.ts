@@ -1,4 +1,4 @@
-import { Conversation, ProjectFile, FileHistory, StyleOptions, SimpleQAMode, StreamMode, ModelType } from '../types';
+import { Conversation, FileHistory, ModelType, ProjectFile, SimpleQAMode, StreamMode } from '../types';
 
 const STORAGE_KEY = 'code_gen_conversations';
 const FILES_KEY = 'code_gen_files';
@@ -8,15 +8,9 @@ const CURRENT_CONVERSATION_KEY = 'code_gen_current_conversation';
 // 默认设置
 const DEFAULT_SETTINGS = {
   model: 'deepseek' as ModelType,
-  styleOptions: {
-    codeStyle: 'modern' as const,
-    commentLevel: 'full' as const,
-    indentation: 'auto' as const
-  },
   simpleQAMode: {
     enabled: true,
-    maxResponseLength: 'medium' as const,
-    includeCodeExamples: true
+    maxResponseLength: 'medium' as const
   },
   streamMode: 'stream' as const
 };
@@ -24,7 +18,6 @@ const DEFAULT_SETTINGS = {
 // 保存设置
 export function saveSettings(settings: {
   model: ModelType;
-  styleOptions: StyleOptions;
   simpleQAMode: SimpleQAMode;
   streamMode: StreamMode;
 }): void {
@@ -38,14 +31,13 @@ export function saveSettings(settings: {
 // 加载设置
 export function loadSettings(): {
   model: ModelType;
-  styleOptions: StyleOptions;
   simpleQAMode: SimpleQAMode;
   streamMode: StreamMode;
 } {
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
     if (data) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+      return {...DEFAULT_SETTINGS, ...JSON.parse(data)};
     }
   } catch (error) {
     console.error('加载设置失败:', error);
@@ -55,10 +47,31 @@ export function loadSettings(): {
 
 // 保存对话
 export function saveConversations(conversations: Conversation[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-  } catch (error) {
-    console.error('保存对话失败:', error);
+  let dataToSave = [...conversations];
+
+  // 循环尝试保存，如果出现 QuotaExceededError 则清理最旧的 5 条对话
+  while (dataToSave.length > 0) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      if (dataToSave.length < conversations.length) {
+        console.warn(`已清理 ${conversations.length - dataToSave.length} 条旧对话`);
+      }
+      break; // 保存成功，退出循环
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        if (dataToSave.length > 5) {
+          console.warn('存储空间不足，清理最旧的 5 条对话...');
+          dataToSave = dataToSave.slice(0, -5); // 移除最旧的 5 条（数组末尾）
+        } else if (dataToSave.length > 0) {
+          // 剩余不足 5 条，全部清理
+          console.error('无法保存，存储空间已满');
+          dataToSave = [];
+        }
+      } else {
+        console.error('保存对话失败:', error);
+        break;
+      }
+    }
   }
 }
 

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatInput, ChatInputRef, ChatMessage, ConversationList, ConversationListRef, DiffViewer, FileExplorer } from './components';
+import {
+  ChatInput,
+  ChatInputRef,
+  ChatMessage,
+  ConversationList,
+  ConversationListRef,
+  DiffViewer,
+  FileExplorer
+} from './components';
 import {
   CodeBlock,
   Conversation,
@@ -11,8 +19,7 @@ import {
   ProjectFile,
   ResponseMode,
   SimpleQAMode,
-  StreamMode,
-  StyleOptions
+  StreamMode
 } from './types';
 import {
   callAI,
@@ -206,10 +213,6 @@ function App() {
     const savedSettings = loadSettings();
     return savedSettings.simpleQAMode;
   });
-  const [styleOptions, setStyleOptions] = useState<StyleOptions>(() => {
-    const savedSettings = loadSettings();
-    return savedSettings.styleOptions;
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [streamingReasoningContent, setStreamingReasoningContent] = useState('');
@@ -360,11 +363,10 @@ function App() {
   useEffect(() => {
     saveSettings({
       model,
-      styleOptions,
       simpleQAMode,
       streamMode
     });
-  }, [model, styleOptions, simpleQAMode, streamMode]);
+  }, [model, simpleQAMode, streamMode]);
 
   // 保存数据
   useEffect(() => {
@@ -754,12 +756,6 @@ function App() {
       });
     }
 
-    // 添加风格选项（仅在代码生成模式）
-    if (responseMode === 'code') {
-      const stylePrompt = `代码风格要求: ${styleOptions.codeStyle}风格, ${styleOptions.commentLevel === 'full' ? '详细注释' : styleOptions.commentLevel === 'minimal' ? '简洁注释' : '不需要注释'}, 使用${styleOptions.indentation === 'auto' ? '智能' : styleOptions.indentation === 'spaces2' ? '2空格' : styleOptions.indentation === 'spaces4' ? '4空格' : 'Tab'}缩进`;
-      messageHistory.push({role: 'system', content: stylePrompt});
-    }
-
     try {
       // 重置状态
       setStreamComplete(false);
@@ -843,6 +839,35 @@ function App() {
       // 标记流结束，显示完成动画
       setStreamComplete(true);
       setShowCompleteAnimation(true);
+
+      // 如果流结束后标题还未生成（回答较短），则在这里生成（仅对新对话）
+      if (!titleGenerationTriggered && existingMessages.length === 0) {
+        titleGenerationTriggered = true;
+        let userText: string;
+        if (typeof messageContent === 'string') {
+          userText = messageContent;
+        } else {
+          const textItem = messageContent.find(item => item.type === 'text');
+          userText = textItem?.text || '图片分析';
+        }
+        // 非流式模式下使用response.content，流式模式下使用已累积的内容
+        const finalContent = aiStreamedContent || response.content || '';
+        if (finalContent) {
+          const conversationText = `用户: ${userText}\n\nAI: ${finalContent}`;
+          generateConversationTitle(conversationText)
+          .then(title => {
+            setConversations(prev => prev.map(c => {
+              if (c.id === convId) {
+                return {...c, title};
+              }
+              return c;
+            }));
+          })
+          .catch(error => {
+            console.error('生成标题失败:', error);
+          });
+        }
+      }
 
       if (response.success && response.content) {
         // 提取代码块
@@ -990,7 +1015,7 @@ function App() {
         setDraftConversation(null);
       }
     }
-  }, [currentConversationId, conversations, draftConversation, model, projectFiles, stagedFiles, styleOptions, responseMode, streamMode, simpleQAMode]);
+  }, [currentConversationId, conversations, draftConversation, model, projectFiles, stagedFiles, responseMode, streamMode, simpleQAMode]);
 
   // 处理文件上传 - 暂存文件
   const handleFileUpload = useCallback(async (files: FileList) => {
@@ -1484,8 +1509,6 @@ function App() {
           stagedFiles={stagedFiles}
           model={model}
           onModelChange={setModel}
-          styleOptions={styleOptions}
-          onStyleChange={setStyleOptions}
           isLoading={isLoading}
           responseMode={responseMode}
           onResponseModeChange={setResponseMode}

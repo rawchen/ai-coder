@@ -13,7 +13,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { ModelType, ProjectFile, ResponseMode, SimpleQAMode, StreamMode, StyleOptions } from '../types';
+import { ModelType, ProjectFile, ResponseMode, SimpleQAMode, StreamMode } from '../types';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 interface ChatInputProps {
@@ -24,8 +24,6 @@ interface ChatInputProps {
   stagedFiles: ProjectFile[];
   model: ModelType;
   onModelChange: (model: ModelType) => void;
-  styleOptions: StyleOptions;
-  onStyleChange: (options: StyleOptions) => void;
   isLoading: boolean;
   suggestions?: string[];
   responseMode: ResponseMode;
@@ -50,8 +48,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   stagedFiles,
   model,
   onModelChange,
-  styleOptions,
-  onStyleChange,
   isLoading,
   suggestions = [],
   responseMode,
@@ -392,17 +388,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                       <option value="long">详细</option>
                     </select>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      id="includeCodeExamples"
-                      checked={simpleQAMode.includeCodeExamples}
-                      onChange={(e) => onSimpleQAModeChange({...simpleQAMode, includeCodeExamples: e.target.checked})}
-                      className={`rounded text-blue-500 ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
-                    />
-                    <label htmlFor="includeCodeExamples"
-                           className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>包含代码示例</label>
-                  </div>
                 </>
               )}
             </div>
@@ -445,59 +430,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 }`}
               />
             </button>
-          </div>
-
-          {/* 代码风格设置 */}
-          <div className={`pt-4 ${isDark ? 'border-t border-gray-600' : 'border-t border-gray-300'}`}>
-            <div className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>代码风格设置</div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>代码风格</label>
-                <select
-                  value={styleOptions.codeStyle}
-                  onChange={(e) => onStyleChange({
-                    ...styleOptions,
-                    codeStyle: e.target.value as StyleOptions['codeStyle']
-                  })}
-                  className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
-                >
-                  <option value="modern">现代</option>
-                  <option value="classic">经典</option>
-                  <option value="minimal">简约</option>
-                </select>
-              </div>
-              <div>
-                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>注释级别</label>
-                <select
-                  value={styleOptions.commentLevel}
-                  onChange={(e) => onStyleChange({
-                    ...styleOptions,
-                    commentLevel: e.target.value as StyleOptions['commentLevel']
-                  })}
-                  className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
-                >
-                  <option value="full">详细</option>
-                  <option value="minimal">简洁</option>
-                  <option value="none">无注释</option>
-                </select>
-              </div>
-              <div>
-                <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>缩进方式</label>
-                <select
-                  value={styleOptions.indentation}
-                  onChange={(e) => onStyleChange({
-                    ...styleOptions,
-                    indentation: e.target.value as StyleOptions['indentation']
-                  })}
-                  className={`w-full text-sm rounded px-2 py-1.5 border ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'}`}
-                >
-                  <option value="auto">智能</option>
-                  <option value="spaces2">2空格</option>
-                  <option value="spaces4">4空格</option>
-                  <option value="tabs">Tab</option>
-                </select>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -605,7 +537,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           ref={fileInputRef}
           onChange={handleFileChange}
           multiple
-          accept={model === 'gpt' 
+          accept={model === 'gpt'
             ? ".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.ico"
             : ".js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.cpp,.c,.h,.html,.css,.json,.md,.txt,.vue,.sql"
           }

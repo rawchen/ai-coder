@@ -98,13 +98,6 @@ export interface ExportOptions {
   filename?: string;
 }
 
-// 风格选项
-export interface StyleOptions {
-  codeStyle: 'modern' | 'classic' | 'minimal';
-  commentLevel: 'full' | 'minimal' | 'none';
-  indentation: 'auto' | 'spaces2' | 'spaces4' | 'tabs';
-}
-
 // 响应模式类型
 export type ResponseMode = 'code' | 'simple';
 
@@ -115,5 +108,4 @@ export type StreamMode = 'stream' | 'direct';
 export interface SimpleQAMode {
   enabled: boolean;
   maxResponseLength: 'short' | 'medium' | 'long';
-  includeCodeExamples: boolean;
 }
