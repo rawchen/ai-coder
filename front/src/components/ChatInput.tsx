@@ -63,6 +63,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const [showSettings, setShowSettings] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -195,10 +196,19 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   useEffect(() => {
     if (textareaRef.current) {
+      // 设置 textarea 实际高度
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 200);
+      textareaRef.current.style.height = `${newHeight}px`;
+      // 文字换行（scrollHeight 超过单行约 40px）则展开
+      // 展开后只有内容清空才收回，避免振荡
+      if (input.trim().length === 0) {
+        setIsExpanded(false);
+      } else if (!isExpanded && newHeight > 40) {
+        setIsExpanded(true);
+      }
     }
-  }, [input]);
+  }, [input, isExpanded]);
 
   // 点击外部关闭设置面板
   useEffect(() => {
@@ -256,7 +266,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     : 'border-gray-200/50 bg-gray-50/80';
 
   return (
-    <div className="absolute bottom-4 left-0 right-0 md:left-20 md:right-20 z-10">
+    <div className="absolute bottom-6 left-0 right-0 md:left-20 md:right-20 z-10">
       {/* 悬浮面板区域：智能推荐 / 暂存文件 / 设置 */}
       {showSuggestions && (
         <div ref={suggestionsRef} className={`mb-2 grid grid-cols-2 gap-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
@@ -424,20 +434,26 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </div>
       )}
 
-      {/* 单行输入栏 */}
+      {/* 输入栏 — OpenAI 风格动态 grid 布局 */}
       <div
-        className={`flex items-center gap-1.5 rounded-[45px] border backdrop-blur-xl px-2.5 py-2 shadow-lg ${panelClass}`}>
+        className={`grid grid-cols-[auto_1fr_auto] gap-x-1.5 ${isExpanded ? 'rounded-[30px]' : 'rounded-[45px]'} border backdrop-blur-xl px-2.5 py-2 shadow-lg ${panelClass}`}
+        style={{
+          gridTemplateAreas: isExpanded
+            ? `"primary primary primary" "leading . trailing"`
+            : `"leading primary trailing"`,
+        }}>
 
-        {/* 左侧：附件上传 */}
+        {/* 左列：附件上传 */}
         <button
           onClick={() => fileInputRef.current?.click()}
           className={`flex-shrink-0 p-2 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}
+          style={{ gridArea: 'leading' }}
           title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
         >
           <Link size={18}/>
         </button>
 
-        {/* 中间：输入框 */}
+        {/* 中列：输入框 */}
         <textarea
           ref={textareaRef}
           value={input}
@@ -447,109 +463,107 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
           placeholder={simpleQAMode.enabled ? "输入问题，获得简洁回答..." : "思考后再回答你的问题..."}
-          className={`flex-1 resize-none focus:outline-none bg-transparent border-none px-2 py-2 max-h-[200px] ${isDark ? 'text-gray-100 placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+          className={`w-full resize-none focus:outline-none bg-transparent border-none px-2 py-2 max-h-[200px] ${isDark ? 'text-gray-100 placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+          style={{ gridArea: 'primary' }}
           rows={1}
           disabled={isLoading}
         />
 
-        {/* 右侧：生成完成提示 */}
-        {streamComplete && (
-          <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
-          </span>
-        )}
+        {/* 右列：按钮组 */}
+        <div className="flex items-center gap-1.5" style={{ gridArea: 'trailing' }}>
+          {/* 智能推荐 */}
+          <button
+            ref={suggestionsButtonRef}
+            onClick={() => setShowSuggestions(!showSuggestions)}
+            className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200/50'}`}`}
+            title="智能推荐"
+          >
+            <Sparkles size={18}/>
+          </button>
 
-        {/* 右侧：智能推荐 */}
-        <button
-          ref={suggestionsButtonRef}
-          onClick={() => setShowSuggestions(!showSuggestions)}
-          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200/50'}`}`}
-          title="智能推荐"
-        >
-          <Sparkles size={18}/>
-        </button>
+          {/* 思考模式 */}
+          <button
+            onClick={toggleSimpleQAMode}
+            className={`flex-shrink-0 p-2 rounded-xl transition-colors ${responseMode === 'code' ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
+            title={responseMode === 'code' ? '思考模式' : '简单模式'}
+          >
+            <Brain size={18}/>
+          </button>
 
-        {/* 右侧：思考模式 */}
-        <button
-          onClick={toggleSimpleQAMode}
-          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${responseMode === 'code' ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
-          title={responseMode === 'code' ? '思考模式' : '简单模式'}
-        >
-          <Brain size={18}/>
-        </button>
+          {/* 设置 */}
+          <button
+            ref={settingsButtonRef}
+            onClick={() => setShowSettings(!showSettings)}
+            className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
+            title="设置"
+          >
+            <Settings size={18}/>
+          </button>
 
-        {/* 右侧：设置 */}
-        <button
-          ref={settingsButtonRef}
-          onClick={() => setShowSettings(!showSettings)}
-          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
-          title="设置"
-        >
-          <Settings size={18}/>
-        </button>
+          {/* 模型选择 */}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                className={`flex-shrink-0 flex items-center gap-1 text-sm rounded-xl px-2.5 py-2 focus:outline-none transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-200/50'}`}
+              >
+                {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
+                <ChevronDown size={14}/>
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className={`min-w-[140px] rounded-lg shadow-lg p-1 z-[9999] ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenu.Item
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('deepseek')}
+                >
+                  <span className="font-medium">DeepSeek</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('kimi')}
+                >
+                  <span className="font-medium">Kimi</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('glm')}
+                >
+                  <span className="font-medium">GLM</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('claude')}
+                >
+                  <span className="font-medium">Claude</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                  onClick={() => onModelChange('gpt')}
+                >
+                  <span className="font-medium">GPT</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
 
-        {/* 右侧：模型选择 */}
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              className={`flex-shrink-0 flex items-center gap-1 text-sm rounded-xl px-2.5 py-2 focus:outline-none transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-200/50'}`}
-            >
-              {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
-              <ChevronDown size={14}/>
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className={`min-w-[140px] rounded-lg shadow-lg p-1 ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
-              align="end"
-            >
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('deepseek')}
-              >
-                <span className="font-medium">DeepSeek</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('kimi')}
-              >
-                <span className="font-medium">Kimi</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('glm')}
-              >
-                <span className="font-medium">GLM</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('claude')}
-              >
-                <span className="font-medium">Claude</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('gpt')}
-              >
-                <span className="font-medium">GPT</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-
-        {/* 右侧：发送按钮 */}
-        <button
-          onClick={handleSubmit}
-          disabled={!input.trim() || isLoading}
-          className={`flex-shrink-0 w-10 h-10 flex items-center justify-center disabled:cursor-not-allowed rounded-[45px] backdrop-blur-xl transition-colors text-white ${isDark ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600' : 'bg-blue-500 hover:bg-blue-400 disabled:bg-gray-400'}`}
-        >
-          {isLoading ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}
-        </button>
+          {/* 发送按钮 */}
+          <button
+            onClick={handleSubmit}
+            disabled={!input.trim() || isLoading}
+            className={`flex-shrink-0 w-10 h-10 flex items-center justify-center disabled:cursor-not-allowed rounded-[45px] backdrop-blur-xl transition-colors text-white ${isDark ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600' : 'bg-blue-500 hover:bg-blue-400 disabled:bg-gray-400'}`}
+          >
+            {isLoading ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}
+          </button>
+        </div>
 
         <input
           type="file"

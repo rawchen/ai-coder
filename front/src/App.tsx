@@ -44,6 +44,7 @@ import { calculateDiff, copyToClipboard, exportAsPdf, exportConversationImage } 
 import {
   ChevronDown,
   Code2,
+  Copy,
   FileText,
   FolderOpen,
   GitCompare,
@@ -52,11 +53,14 @@ import {
   Menu,
   MessageSquare,
   Moon,
+  MoreHorizontal,
   PanelLeftClose,
   PanelRightClose,
   Plus,
   Search as SearchIcon,
-  Sun
+  Share,
+  Sun,
+  ThumbsUp
 } from 'lucide-react';
 import { useScrollStore } from './stores/scrollStore';
 import { scrollEventBus } from './services/eventBus';
@@ -1434,7 +1438,7 @@ function App() {
         )}
 
         {/* 聊天消息区 */}
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto pb-32">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto pb-28">
           {currentConversation?.messages.map(message => (
             <ChatMessage
               key={message.id}
@@ -1461,6 +1465,51 @@ function App() {
               />
             </>
           )}
+
+          {/* AI 回复操作栏 - 生成完成后显示 */}
+          {streamComplete && !isLoading && currentConversation && currentConversation.messages.length > 0 && (() => {
+            const lastMsg = currentConversation.messages[currentConversation.messages.length - 1];
+            if (lastMsg.role !== 'assistant') return null;
+            const assistantText = typeof lastMsg.content === 'string' ? lastMsg.content : '';
+            return (
+              <div className={`flex items-center gap-1 px-2 md:px-6 py-1 ml-10`}>
+                {/* 生成完成绿点 */}
+                <span className="flex items-center gap-1.5 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
+                  生成完成
+                </span>
+                {/* 复制 */}
+                <button
+                  onClick={() => assistantText && copyToClipboard(assistantText)}
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                  title="复制回复"
+                >
+                  <Copy size={16}/>
+                </button>
+                {/* 评价 */}
+                <button
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                  title="评价回复"
+                >
+                  <ThumbsUp size={16}/>
+                </button>
+                {/* 分享 */}
+                <button
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                  title="分享"
+                >
+                  <Share size={16}/>
+                </button>
+                {/* 更多操作 */}
+                <button
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                  title="更多操作"
+                >
+                  <MoreHorizontal size={16}/>
+                </button>
+              </div>
+            );
+          })()}
 
           {/* 空状态 */}
           {!currentConversation && (
