@@ -251,12 +251,15 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   const displaySuggestions = suggestions.length > 0 ? suggestions : defaultSuggestions;
 
+  const panelClass = isDark
+    ? 'border-gray-700/50 bg-gray-dark-800/80'
+    : 'border-gray-200/50 bg-gray-50/80';
+
   return (
-    <div
-      className={`p-4 absolute bottom-0 left-0 right-0 rounded-tl-[25px] rounded-tr-[25px] ml-0 mr-0 md:ml-20 md:mr-20 border backdrop-blur-xl ${isDark ? 'border-gray-700/50 bg-gray-dark-800/60' : 'border-gray-200/50 bg-gray-50/60'}`}>
-      {/* 智能推荐 */}
+    <div className="absolute bottom-4 left-0 right-0 md:left-20 md:right-20 z-10">
+      {/* 悬浮面板区域：智能推荐 / 暂存文件 / 设置 */}
       {showSuggestions && (
-        <div ref={suggestionsRef} className="mb-4 grid grid-cols-2 gap-2">
+        <div ref={suggestionsRef} className={`mb-2 grid grid-cols-2 gap-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
           {displaySuggestions.slice(0, 6).map((suggestion, index) => (
             <button
               key={index}
@@ -270,20 +273,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </div>
       )}
 
-      {/* 暂存的文件显示 */}
       {stagedFiles.length > 0 && (
-        <div className="mb-3">
-          {/*<div className="flex items-center justify-between mb-2">*/}
-          {/*  /!*<span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>已选择 {stagedFiles.length} 个文件</span>*!/*/}
-          {/*  /!*<button*!/*/}
-          {/*  /!*  onClick={handleSendWithFiles}*!/*/}
-          {/*  /!*  disabled={isLoading}*!/*/}
-          {/*  /!*  className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white text-xs rounded-lg transition-colors"*!/*/}
-          {/*  /!*>*!/*/}
-          {/*  /!*  <Send size={12}/>*!/*/}
-          {/*  /!*  发送分析*!/*/}
-          {/*  /!*</button>*!/*/}
-          {/*</div>*/}
+        <div className={`mb-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
           <div className="flex flex-wrap gap-2">
             {stagedFiles.map((file) => (
               <div
@@ -355,10 +346,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </div>
       )}
 
-      {/* 统一设置面板 */}
       {showSettings && (
         <div ref={settingsRef}
-             className={`mb-4 p-4 rounded-lg space-y-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-200/50'}`}>
+             className={`mb-2 p-4 rounded-2xl border backdrop-blur-xl space-y-4 ${panelClass}`}>
           {/* 简单问答模式设置 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -434,103 +424,132 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </div>
       )}
 
-      {/* 模型选择和设置 */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button
-                className={`flex items-center gap-2 text-sm rounded px-3 py-1.5 focus:outline-none ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+      {/* 单行输入栏 */}
+      <div
+        className={`flex items-center gap-1.5 rounded-2xl border backdrop-blur-xl px-2.5 py-2 shadow-lg ${panelClass}`}>
+
+        {/* 左侧：附件上传 */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}
+          title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
+        >
+          <Link size={18}/>
+        </button>
+
+        {/* 中间：输入框 */}
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
+          placeholder={simpleQAMode.enabled ? "输入问题，获得简洁回答..." : "思考后再回答你的问题..."}
+          className={`flex-1 resize-none focus:outline-none bg-transparent border-none px-2 py-2 max-h-[200px] ${isDark ? 'text-gray-100 placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+          rows={1}
+          disabled={isLoading}
+        />
+
+        {/* 右侧：生成完成提示 */}
+        {streamComplete && (
+          <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
+          </span>
+        )}
+
+        {/* 右侧：智能推荐 */}
+        <button
+          ref={suggestionsButtonRef}
+          onClick={() => setShowSuggestions(!showSuggestions)}
+          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200/50'}`}`}
+          title="智能推荐"
+        >
+          <Sparkles size={18}/>
+        </button>
+
+        {/* 右侧：思考模式 */}
+        <button
+          onClick={toggleSimpleQAMode}
+          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${responseMode === 'code' ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
+          title={responseMode === 'code' ? '思考模式' : '简单模式'}
+        >
+          <Brain size={18}/>
+        </button>
+
+        {/* 右侧：设置 */}
+        <button
+          ref={settingsButtonRef}
+          onClick={() => setShowSettings(!showSettings)}
+          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}`}
+          title="设置"
+        >
+          <Settings size={18}/>
+        </button>
+
+        {/* 右侧：模型选择 */}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              className={`flex-shrink-0 flex items-center gap-1 text-sm rounded-xl px-2.5 py-2 focus:outline-none transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-200/50'}`}
+            >
+              {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
+              <ChevronDown size={14}/>
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              className={`min-w-[140px] rounded-lg shadow-lg p-1 ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
+              align="end"
+            >
+              <DropdownMenu.Item
+                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                onClick={() => onModelChange('deepseek')}
               >
-                {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
-                <ChevronDown size={14}/>
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className={`min-w-[140px] rounded-lg shadow-lg p-1 ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
-                align="start"
+                <span className="font-medium">DeepSeek</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                onClick={() => onModelChange('kimi')}
               >
-                <DropdownMenu.Item
-                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                  onClick={() => onModelChange('deepseek')}
-                >
-                  <span className="font-medium">DeepSeek</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                  onClick={() => onModelChange('kimi')}
-                >
-                  <span className="font-medium">Kimi</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                  onClick={() => onModelChange('glm')}
-                >
-                  <span className="font-medium">GLM</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                  onClick={() => onModelChange('claude')}
-                >
-                  <span className="font-medium">Claude</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                  onClick={() => onModelChange('gpt')}
-                >
-                  <span className="font-medium">GPT</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`p-1.5 rounded-lg transition-colors text-blue-400 ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}
-            title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
-          >
-            <Link size={16}/>
-          </button>
-          <button
-            ref={suggestionsButtonRef}
-            onClick={() => setShowSuggestions(!showSuggestions)}
-            className={`p-1.5 rounded-lg transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200'}`}`}
-            title="智能推荐"
-          >
-            <Sparkles size={18}/>
-          </button>
+                <span className="font-medium">Kimi</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                onClick={() => onModelChange('glm')}
+              >
+                <span className="font-medium">GLM</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                onClick={() => onModelChange('claude')}
+              >
+                <span className="font-medium">Claude</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                onClick={() => onModelChange('gpt')}
+              >
+                <span className="font-medium">GPT</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
 
-          <button
-            onClick={toggleSimpleQAMode}
-            className={`p-1.5 rounded-lg transition-colors ${responseMode === 'code' ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}`}
-            title={responseMode === 'code' ? '思考模式' : '简单模式'}
-          >
-            <Brain size={18}/>
-          </button>
-
-          <button
-            ref={settingsButtonRef}
-            onClick={() => setShowSettings(!showSettings)}
-            className={`p-1.5 rounded-lg transition-colors ${showSettings ? 'bg-blue-500/20 text-blue-400' : `${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200'}`}`}
-            title="设置"
-          >
-            <Settings size={18}/>
-          </button>
-
-          {/* 生成完成提示 - 一直显示直到下一次生成 */}
-          {streamComplete && (
-            <span
-              className="flex items-center gap-1.5 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
-              生成完成
-            </span>
-          )}
-        </div>
+        {/* 右侧：发送按钮 */}
+        <button
+          onClick={handleSubmit}
+          disabled={!input.trim() || isLoading}
+          className={`flex-shrink-0 w-9 h-9 flex items-center justify-center disabled:cursor-not-allowed rounded-xl transition-colors text-white ${isDark ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600' : 'bg-blue-500 hover:bg-blue-400 disabled:bg-gray-400'}`}
+        >
+          {isLoading ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}
+        </button>
 
         <input
           type="file"
@@ -543,33 +562,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           }
           className="hidden"
         />
-      </div>
-
-      {/* 输入框 */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative mb-[-6px]">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-            placeholder={simpleQAMode.enabled ? "输入问题，获得简洁回答..." : "思考后再回答你的问题..."}
-            className={`w-full rounded-xl px-4 py-3 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed ${isDark ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-gray-900 placeholder-gray-400'}`}
-            rows={1}
-            disabled={isLoading}
-          />
-        </div>
-
-        <button
-          onClick={handleSubmit}
-          disabled={!input.trim() || isLoading}
-          className={`flex-shrink-0 self-end w-[48px] h-[48px] flex items-center justify-center disabled:cursor-not-allowed rounded-xl transition-colors text-white ${isDark ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600' : 'bg-blue-500 hover:bg-blue-400 disabled:bg-gray-400'}`}
-        >
-          {isLoading ? <Loader2 size={20} className="animate-spin"/> : <Send size={20}/>}
-        </button>
       </div>
     </div>
   );
