@@ -178,7 +178,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     }
   };
 
-  const useSuggestion = (suggestion: string) => {
+  const applySuggestion = (suggestion: string) => {
     setInput(suggestion);
     setShowSuggestions(false);
     textareaRef.current?.focus();
@@ -274,7 +274,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           {displaySuggestions.slice(0, 6).map((suggestion, index) => (
             <button
               key={index}
-              onClick={() => useSuggestion(suggestion)}
+              onClick={() => applySuggestion(suggestion)}
               className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors text-left ${isDark ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
             >
               <Sparkles size={14} className="text-yellow-400 flex-shrink-0"/>
@@ -470,9 +470,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           disabled={isLoading}
         />
 
-        {/* 右列：按钮组 */}
+        {/* 右侧：智能推荐 */}
         <div className="flex items-center gap-1.5" style={{ gridArea: 'trailing' }}>
-          {/* 智能推荐 */}
           <button
             ref={suggestionsButtonRef}
             onClick={() => setShowSuggestions(!showSuggestions)}
@@ -481,23 +480,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           >
             <Sparkles size={18}/>
           </button>
-        {/* 右侧：生成完成提示 */}
-        {streamComplete && (
-          <span
-            className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
-          </span>
-        )}
-
-        {/* 右侧：智能推荐 */}
-        <button
-          ref={suggestionsButtonRef}
-          onClick={() => setShowSuggestions(!showSuggestions)}
-          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${showSuggestions ? 'bg-yellow-500/20 text-yellow-400' : `${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-yellow-600 hover:bg-gray-200/50'}`}`}
-          title="智能推荐"
-        >
-          <Sparkles size={18}/>
-        </button>
 
           {/* 思考模式 */}
           <button
@@ -518,7 +500,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             <Settings size={18}/>
           </button>
 
-          {/* 模型选择 */}
+          {/* 右侧：模型选择 */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
@@ -539,14 +521,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   onClick={() => onModelChange('deepseek')}
                 >
                   <span className="font-medium">DeepSeek</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>v4-flash</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
                   onClick={() => onModelChange('kimi')}
                 >
                   <span className="font-medium">Kimi</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.6</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
@@ -560,7 +542,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   onClick={() => onModelChange('claude')}
                 >
                   <span className="font-medium">Claude</span>
-                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>sonnet-5</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
@@ -572,59 +554,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
-        {/* 右侧：模型选择 */}
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              className={`flex-shrink-0 flex items-center gap-1 text-sm rounded-xl px-2.5 py-2 focus:outline-none transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-200/50'}`}
-            >
-              {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
-              <ChevronDown size={14}/>
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className={`min-w-[140px] rounded-lg shadow-lg p-1 ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
-              align="end"
-            >
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('deepseek')}
-              >
-                <span className="font-medium">DeepSeek</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>v4-flash</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('kimi')}
-              >
-                <span className="font-medium">Kimi</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>k2.6</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('glm')}
-              >
-                <span className="font-medium">GLM</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('claude')}
-              >
-                <span className="font-medium">Claude</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>sonnet-5</span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
-                onClick={() => onModelChange('gpt')}
-              >
-                <span className="font-medium">GPT</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
 
           {/* 发送按钮 */}
           <button
