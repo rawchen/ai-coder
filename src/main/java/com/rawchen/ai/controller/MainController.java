@@ -103,6 +103,9 @@ public class MainController {
                 body.put("stream", false);
                 body.put("temperature", 0.7);
                 body.put("max_tokens", 20);
+                Map<String, String> thinking = new HashMap<>();
+                thinking.put("type", "disabled");
+                body.put("thinking", thinking);
                 String jsonBody = JSONUtil.toJsonStr(body);
                 log.info("标题生成请求体: {}", jsonBody);
 
