@@ -259,7 +259,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     <div className="absolute bottom-4 left-0 right-0 md:left-20 md:right-20 z-10">
       {/* 悬浮面板区域：智能推荐 / 暂存文件 / 设置 */}
       {showSuggestions && (
-        <div ref={suggestionsRef} className={`mb-2 grid grid-cols-2 gap-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
+        <div ref={suggestionsRef}
+             className={`mb-2 grid grid-cols-2 gap-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
           {displaySuggestions.slice(0, 6).map((suggestion, index) => (
             <button
               key={index}
@@ -454,7 +455,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
         {/* 右侧：生成完成提示 */}
         {streamComplete && (
-          <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+          <span
+            className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
           </span>
         )}
@@ -508,14 +510,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 onClick={() => onModelChange('deepseek')}
               >
                 <span className="font-medium">DeepSeek</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>V3.2</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>v4-flash</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
                 onClick={() => onModelChange('kimi')}
               >
                 <span className="font-medium">Kimi</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.5</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>k2.6</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
@@ -529,7 +531,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 onClick={() => onModelChange('claude')}
               >
                 <span className="font-medium">Claude</span>
-                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>Haiku-4.5</span>
+                <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>sonnet-5</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
