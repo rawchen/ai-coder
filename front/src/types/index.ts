@@ -93,7 +93,7 @@ export interface ApiResponse {
 
 // 导出选项
 export interface ExportOptions {
-  format: 'pdf' | 'zip' | 'copy';
+  format: 'md' | 'zip' | 'copy';
   includeHistory?: boolean;
   filename?: string;
 }

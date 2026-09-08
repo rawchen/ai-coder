@@ -40,7 +40,7 @@ import {
   saveCurrentConversationId,
   saveSettings
 } from './services/storage';
-import { calculateDiff, copyToClipboard, exportAsPdf, exportConversationImage } from './services/utils';
+import { calculateDiff, copyToClipboard, exportAsMarkdown, exportConversationImage } from './services/utils';
 import {
   ChevronDown,
   Code2,
@@ -1256,7 +1256,7 @@ function App() {
   }, []);
 
   // 导出功能
-  const handleExportPdf = useCallback(() => {
+  const handleExportMarkdown = useCallback(() => {
     if (!currentConversation) {
       alert('没有对话内容可导出');
       return;
@@ -1265,9 +1265,9 @@ function App() {
     .map(m => `[${m.role === 'user' ? '用户' : 'AI'}]\n${m.content}`)
     .join('\n\n---\n\n');
     try {
-      exportAsPdf(content, currentConversation.title);
+      exportAsMarkdown(content, currentConversation.title);
     } catch (error) {
-      console.error('PDF导出失败:', error);
+      console.error('Markdown导出失败:', error);
       alert('导出失败，请稍后重试');
     }
   }, [currentConversation]);
@@ -1618,9 +1618,9 @@ function App() {
                 <ImageIcon size={20}/>
               </button>
               <button
-                onClick={handleExportPdf}
+                onClick={handleExportMarkdown}
                 className={`p-2 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                title="导出 PDF"
+                title="导出 Markdown"
               >
                 <FileText size={20}/>
               </button>
@@ -1669,12 +1669,12 @@ function App() {
                 </button>
 
                 <button
-                  onClick={handleExportPdf}
+                  onClick={handleExportMarkdown}
                   className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                  title="导出 PDF"
+                  title="导出 Markdown"
                 >
                   <FileText size={18}/>
-                  {/*<span>PDF</span>*/}
+                  {/*<span>MD</span>*/}
                 </button>
 
                 <button

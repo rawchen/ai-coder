@@ -1,7 +1,6 @@
 import { DiffChange, DiffResult } from '../types';
 import { Change, diffLines } from 'diff';
 import JSZip from 'jszip';
-import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
 import html2canvas from 'html2canvas';
 
@@ -83,118 +82,18 @@ Generated at: ${new Date().toLocaleString()}
   }
 }
 
-// 导出为 PDF（修复乱码问题，优化显示效果）
-export function exportAsPdf(
+// 导出为 Markdown 文件
+export function exportAsMarkdown(
   content: string,
   title: string = '代码生成结果'
 ): void {
   try {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    // 设置页面边距
-    const margin = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const contentWidth = pageWidth - margin * 2;
-
-    // 标题
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, margin, margin);
-
-    // 分割内容为多行，处理代码块
-    const lines = content.split('\n');
-    let y = margin + 15;
-    let lineHeight = 6;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      // 检测是否为代码块标记
-      if (line.startsWith('```')) {
-        // 跳过代码块标记
-        continue;
-      }
-
-      // 检测是否为消息分隔符
-      if (line.match(/^---+$/)) {
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += lineHeight;
-        continue;
-      }
-
-      // 检测是否为角色标识
-      if (line.startsWith('[') && line.includes(']')) {
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(59, 130, 246); // 蓝色
-        const roleLines = doc.splitTextToSize(line, contentWidth);
-        for (const roleLine of roleLines) {
-          if (y > pageHeight - margin) {
-            doc.addPage();
-            y = margin;
-          }
-          doc.text(roleLine, margin, y);
-          y += lineHeight;
-        }
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        continue;
-      }
-
-      // 普通文本
-      const isCodeLine = line.startsWith('//') || line.startsWith('#') ||
-        line.startsWith('import ') || line.startsWith('export ') ||
-        line.match(/^[a-zA-Z_$][\w$]*\s*=/);
-
-      if (isCodeLine) {
-        doc.setFont('courier', 'normal');
-        doc.setFontSize(9);
-        lineHeight = 5;
-      } else {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        lineHeight = 6;
-      }
-
-      const textLines = doc.splitTextToSize(line || ' ', contentWidth);
-
-      for (const textLine of textLines) {
-        if (y > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text(textLine, margin, y);
-        y += lineHeight;
-      }
-    }
-
-    // 添加页码
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      doc.text(
-        `第 ${i} 页 / 共 ${pageCount} 页`,
-        pageWidth / 2,
-        pageHeight - 10,
-        {align: 'center'}
-      );
-    }
-
-    // 保存PDF
-    doc.save(`${title}.pdf`);
+    const mdContent = `# ${title}\n\n> 导出时间: ${new Date().toLocaleString()}\n\n${content}\n`;
+    const blob = new Blob([mdContent], {type: 'text/markdown;charset=utf-8'});
+    saveAs(blob, `${title}.md`);
   } catch (error) {
-    console.error('PDF导出失败:', error);
-    throw new Error('PDF导出失败，请稍后重试');
+    console.error('Markdown导出失败:', error);
+    throw new Error('Markdown导出失败，请稍后重试');
   }
 }
 
