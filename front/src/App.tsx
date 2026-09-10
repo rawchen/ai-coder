@@ -64,6 +64,7 @@ import {
 } from 'lucide-react';
 import { useScrollStore } from './stores/scrollStore';
 import { scrollEventBus } from './services/eventBus';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 type RightPanelTab = 'files' | 'diff';
 
@@ -769,8 +770,8 @@ function App() {
       setReasoningStartTime(0);
       setCurrentThinkingTime(0);
 
-      // 根据流式输出模式决定是否使用回调
-      const useStream = streamMode === 'stream';
+      // 根据流式输出模式决定是否使用回调（移动端固定为流式输出）
+      const useStream = deviceType === 'mobile' ? true : streamMode === 'stream';
       const streamCallback = useStream ? (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
         aiStreamedContent += chunk;
@@ -837,7 +838,8 @@ function App() {
         reasoningCompleteCallback,
         useStream,
         responseMode,
-        responseMode === 'simple' ? simpleQAMode : undefined
+        // 移动端不指定回答长度，故不拼接长度限制参数
+        responseMode === 'simple' && deviceType !== 'mobile' ? simpleQAMode : undefined
       );
 
       // 标记流结束，显示完成动画
@@ -1019,7 +1021,7 @@ function App() {
         setDraftConversation(null);
       }
     }
-  }, [currentConversationId, conversations, draftConversation, model, projectFiles, stagedFiles, responseMode, streamMode, simpleQAMode]);
+  }, [currentConversationId, conversations, draftConversation, model, projectFiles, stagedFiles, responseMode, streamMode, simpleQAMode, deviceType]);
 
   // 处理文件上传 - 暂存文件
   const handleFileUpload = useCallback(async (files: FileList) => {
@@ -1432,8 +1434,60 @@ function App() {
             <h1 className={`text-base max-w-[200px] truncate ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
               {currentConversation?.title || 'AiCoder'}
             </h1>
-            <div className="w-9"/>
-            {/* 占位符，保持标题居中 */}
+            {/* 模型选择（移动端移至右上角） */}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  className={`flex-shrink-0 flex items-center gap-0.5 text-sm rounded-lg px-2 py-1.5 focus:outline-none transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700/60' : 'text-gray-700 hover:bg-gray-200/60'}`}
+                >
+                  {model === 'deepseek' ? 'DeepSeek' : model === 'kimi' ? 'Kimi' : model === 'glm' ? 'GLM' : model === 'claude' ? 'Claude' : 'GPT'}
+                  <ChevronDown size={14}/>
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  className={`min-w-[140px] rounded-lg shadow-lg p-1 z-[9999] ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenu.Item
+                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'deepseek' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                    onClick={() => setModel('deepseek')}
+                  >
+                    <span className="font-medium">DeepSeek</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>v4-flash</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'kimi' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                    onClick={() => setModel('kimi')}
+                  >
+                    <span className="font-medium">Kimi</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>K2.6</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'glm' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                    onClick={() => setModel('glm')}
+                  >
+                    <span className="font-medium">GLM</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>glm-5</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'claude' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                    onClick={() => setModel('claude')}
+                  >
+                    <span className="font-medium">Claude</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>sonnet-5</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`flex flex-col items-center px-3 py-2 text-sm rounded-md cursor-pointer outline-none focus:bg-blue-500 ${model === 'gpt' ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : (isDark ? 'text-gray-200' : 'text-gray-700')}`}
+                    onClick={() => setModel('gpt')}
+                  >
+                    <span className="font-medium">GPT</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-100' : 'text-gray-500'}`}>gpt-5.4</span>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           </div>
         )}
 
@@ -1567,6 +1621,7 @@ function App() {
           onSimpleQAModeChange={setSimpleQAMode}
           streamComplete={streamComplete}
           isDark={isDark}
+          deviceType={deviceType}
         />
       </div>
 

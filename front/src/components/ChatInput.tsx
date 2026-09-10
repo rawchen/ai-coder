@@ -1,12 +1,15 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Brain,
+  Check,
   CheckCircle,
   ChevronDown,
   File,
   Link,
   Loader2,
   MessageCircle,
+  Paperclip,
+  Plus,
   Radio,
   Send,
   Settings,
@@ -34,6 +37,7 @@ interface ChatInputProps {
   onSimpleQAModeChange: (mode: SimpleQAMode) => void;
   streamComplete?: boolean;
   isDark: boolean;
+  deviceType?: 'mobile' | 'ipad' | 'desktop';
 }
 
 export interface ChatInputRef {
@@ -57,7 +61,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   simpleQAMode,
   onSimpleQAModeChange,
   streamComplete = false,
-  isDark
+  isDark,
+  deviceType = 'desktop'
 }, ref) => {
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -70,6 +75,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const suggestionsButtonRef = useRef<HTMLButtonElement>(null);
+
+  // 移动端标识：精简输入栏，仅保留发送按钮
+  const isMobile = deviceType === 'mobile';
 
   // 暴露 focus 方法给父组件
   useImperativeHandle(ref, () => ({
@@ -194,6 +202,15 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     onResponseModeChange(newEnabled ? 'simple' : 'code');
   };
 
+  // 直接切换到指定模式（思考模式 = code，简单模式 = simple）
+  const setQAMode = (mode: 'code' | 'simple') => {
+    onSimpleQAModeChange({
+      ...simpleQAMode,
+      enabled: mode === 'simple'
+    });
+    onResponseModeChange(mode);
+  };
+
   useEffect(() => {
     if (textareaRef.current) {
       // 设置 textarea 实际高度
@@ -268,7 +285,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   return (
     <div className="absolute bottom-6 left-0 right-0 md:left-20 md:right-20 z-10">
       {/* 悬浮面板区域：智能推荐 / 暂存文件 / 设置 */}
-      {showSuggestions && (
+      {!isMobile && showSuggestions && (
         <div ref={suggestionsRef}
              className={`mb-2 grid grid-cols-2 gap-2 rounded-2xl border backdrop-blur-xl p-3 ${panelClass}`}>
           {displaySuggestions.slice(0, 6).map((suggestion, index) => (
@@ -357,7 +374,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </div>
       )}
 
-      {showSettings && (
+      {!isMobile && showSettings && (
         <div ref={settingsRef}
              className={`mb-2 p-4 rounded-2xl border backdrop-blur-xl space-y-4 ${panelClass}`}>
           {/* 简单问答模式设置 */}
@@ -444,15 +461,72 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             : `"leading primary trailing"`,
         }}>
 
-        {/* 左列：附件上传 */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex-shrink-0 p-2 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}
-          style={{ gridArea: 'leading' }}
-          title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
-        >
-          <Link size={18}/>
-        </button>
+        {/* 左列：附件上传（移动端改为菜单：添加附件 / 思考模式） */}
+        {isMobile ? (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                className={`flex-shrink-0 p-2 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}
+                style={{gridArea: 'leading'}}
+                title="更多"
+              >
+                <Plus size={18}/>
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className={`min-w-[170px] rounded-lg shadow-lg p-1 z-[9999] ${isDark ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}
+                align="start"
+                side="top"
+                sideOffset={6}
+              >
+                <DropdownMenu.Item
+                  className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none ${isDark ? 'text-gray-200 focus:bg-blue-500' : 'text-gray-700 focus:bg-blue-500'}`}
+                  onSelect={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip size={16} className="text-blue-400"/>
+                  <span>添加附件</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none ${isDark ? 'text-gray-200 focus:bg-blue-500' : 'text-gray-700 focus:bg-blue-500'}`}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setQAMode('code');
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Brain size={16} className={responseMode === 'code' ? 'text-blue-400' : 'text-gray-400'}/>
+                    <span>思考模式</span>
+                  </span>
+                  {responseMode === 'code' && <Check size={16} className="text-blue-400"/>}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none ${isDark ? 'text-gray-200 focus:bg-blue-500' : 'text-gray-700 focus:bg-blue-500'}`}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setQAMode('simple');
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <MessageCircle size={16}
+                                   className={simpleQAMode.enabled ? 'text-green-400' : 'text-gray-400'}/>
+                    <span>简单模式</span>
+                  </span>
+                  {simpleQAMode.enabled && <Check size={16} className="text-green-400"/>}
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex-shrink-0 p-2 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-700/50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-200/50'}`}
+            style={{gridArea: 'leading'}}
+            title={model === 'gpt' ? '上传文件（支持图片）' : '上传文件（仅代码文件，图片仅GPT支持）'}
+          >
+            <Link size={18}/>
+          </button>
+        )}
 
         {/* 中列：输入框 */}
         <textarea
@@ -470,8 +544,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           disabled={isLoading}
         />
 
-        {/* 右侧：智能推荐 */}
+        {/* 右侧：桌面端保留全部按钮，移动端仅保留发送按钮 */}
         <div className="flex items-center gap-1.5" style={{ gridArea: 'trailing' }}>
+          {!isMobile && (<>
           <button
             ref={suggestionsButtonRef}
             onClick={() => setShowSuggestions(!showSuggestions)}
@@ -554,6 +629,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
+          </>)}
 
           {/* 发送按钮 */}
           <button
