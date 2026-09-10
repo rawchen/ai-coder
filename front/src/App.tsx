@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ChatInput,
   ChatInputRef,
@@ -1305,6 +1305,9 @@ function App() {
     }
   }, []);
 
+  // 当前对话的消息列表，渲染时统一取用
+  const currentMessages = currentConversation?.messages ?? [];
+
   return (
     <div
       className={`h-[100dvh] flex overflow-hidden ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
@@ -1493,15 +1496,64 @@ function App() {
 
         {/* 聊天消息区 */}
         <div ref={chatContainerRef} className="flex-1 overflow-y-auto pb-28">
-          {currentConversation?.messages.map(message => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              onApplyCode={applyCode}
-              onCopyCode={copyToClipboard}
-              isDark={isDark}
-            />
-          ))}
+          {currentMessages.map((message, index) => {
+            const isLastMessage = index === currentMessages.length - 1;
+            // 仅当会话最后一条为助手消息、且当前没有正在生成时才显示“生成完成”
+            const showCompleted = isLastMessage && message.role === 'assistant' && !isLoading;
+            const messageText = typeof message.content === 'string' ? message.content : '';
+
+            return (
+              <Fragment key={message.id}>
+                <ChatMessage
+                  message={message}
+                  onApplyCode={applyCode}
+                  onCopyCode={copyToClipboard}
+                  isDark={isDark}
+                />
+                {message.role === 'assistant' && (
+                  <div className={`flex items-center gap-1 px-2 md:px-6 py-1 ml-10`}>
+                    {/* 生成完成绿点：仅最后一条已完成的助手消息显示 */}
+                    {showCompleted && (
+                      <span
+                        className="flex items-center gap-1.5 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
+                        生成完成
+                      </span>
+                    )}
+                    {/* 复制 */}
+                    <button
+                      onClick={() => messageText && copyToClipboard(messageText)}
+                      className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                      title="复制回复"
+                    >
+                      <Copy size={16}/>
+                    </button>
+                    {/* 评价 */}
+                    <button
+                      className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                      title="评价回复"
+                    >
+                      <ThumbsUp size={16}/>
+                    </button>
+                    {/* 分享 */}
+                    <button
+                      className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                      title="分享"
+                    >
+                      <Share size={16}/>
+                    </button>
+                    {/* 更多操作 */}
+                    <button
+                      className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+                      title="更多操作"
+                    >
+                      <MoreHorizontal size={16}/>
+                    </button>
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
 
           {/* 流式输出显示 */}
           {isLoading && (streamingContent || streamingReasoningContent) && (
@@ -1519,51 +1571,6 @@ function App() {
               />
             </>
           )}
-
-          {/* AI 回复操作栏 - 生成完成后显示 */}
-          {streamComplete && !isLoading && currentConversation && currentConversation.messages.length > 0 && (() => {
-            const lastMsg = currentConversation.messages[currentConversation.messages.length - 1];
-            if (lastMsg.role !== 'assistant') return null;
-            const assistantText = typeof lastMsg.content === 'string' ? lastMsg.content : '';
-            return (
-              <div className={`flex items-center gap-1 px-2 md:px-6 py-1 ml-10`}>
-                {/* 生成完成绿点 */}
-                <span className="flex items-center gap-1.5 px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"/>
-                  生成完成
-                </span>
-                {/* 复制 */}
-                <button
-                  onClick={() => assistantText && copyToClipboard(assistantText)}
-                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                  title="复制回复"
-                >
-                  <Copy size={16}/>
-                </button>
-                {/* 评价 */}
-                <button
-                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                  title="评价回复"
-                >
-                  <ThumbsUp size={16}/>
-                </button>
-                {/* 分享 */}
-                <button
-                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                  title="分享"
-                >
-                  <Share size={16}/>
-                </button>
-                {/* 更多操作 */}
-                <button
-                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                  title="更多操作"
-                >
-                  <MoreHorizontal size={16}/>
-                </button>
-              </div>
-            );
-          })()}
 
           {/* 空状态 */}
           {!currentConversation && (
